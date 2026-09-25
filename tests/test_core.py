@@ -91,3 +91,13 @@ def test_email_follows_person_pseudonym():
     name = p.fake_for("Rashi Patil", T.PERSON).lower().split()
     email = p.fake_for("rashhi.patil@gmail.com", T.EMAIL)
     assert email == f"{name[0]}.{name[1]}@example.com"
+
+
+def test_dob_rejects_impossible_years_and_phone_numbers():
+    det = PIIDetector()
+    dob = lambda text, **kw: [s.text for s in det.detect(text, **kw) if s.type == T.DOB]  # noqa: E731
+    assert dob("Date of Birth: 06/05/2000") == ["06/05/2000"]
+    assert dob("Tel: 91-20-2721 8080, Fax: 91-20-2721 8081", id_context=True) == []
+    assert dob("DOB 12/12/2721") == []
+    assert dob("DOB 12/12/1888") == []
+    assert dob("born on 31/13/1990") == []
