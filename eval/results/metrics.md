@@ -1,6 +1,6 @@
 # Results on `benchmark_rhp.docx`
 
-75 annotated entities, 43 negative traps, runtime 3.17s.
+75 annotated entities, 43 negative traps, runtime 2.91s.
 
 ## Detection (strict matching)
 

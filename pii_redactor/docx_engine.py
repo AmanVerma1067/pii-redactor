@@ -19,6 +19,7 @@ from typing import Iterator
 from lxml import etree
 
 from .entities import EntityType as T
+from .gazetteer import GENERIC_ORG_WORDS, NAME_STOP
 from .heuristics import classify_header
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -158,26 +159,43 @@ def replace_in_paragraphs(root: etree._Element, pseudo) -> int:
 
 
 # ------------------------------------------------------------------ non-run text & attributes
+_W_CONTAINER_TAGS = frozenset(W + t for t in (
+    "body", "p", "r", "tbl", "tr", "tc", "sdt", "sdtContent", "txbxContent",
+    "del", "ins", "moveFrom", "moveTo", "smartTag", "customXml", "hyperlink",
+    "fldSimple", "bdo", "dir", "document", "sectPr", "pPr", "rPr", "tblPr",
+))
+
+
 def scrub_generic(root: etree._Element, pseudo) -> int:
     """Field codes, tracked deletions, DrawingML/chart text, alt-text, core/app props, authors."""
     n = 0
     for el in root.iter():
         if not isinstance(el.tag, str):
             continue
-        if el.tag != W + "t" and el.text and el.text.strip():
+        if el.tag != W + "t" and el.tag not in _W_CONTAINER_TAGS and el.text and el.text.strip():
             new = pseudo.replace_text(el.text)
             if new != el.text:
-                el.text, n = new, n + 1
+                try:
+                    el.text = new
+                    n += 1
+                except (AttributeError, TypeError):
+                    pass
         for attr in list(el.attrib):
             local = attr.split("}")[-1]
             if local in ATTR_REDACT:
-                el.set(attr, "Redacted")
+                try:
+                    el.set(attr, "Redacted")
+                except Exception:
+                    pass
             elif local in ATTR_REPLACE or (local == "name" and el.tag.endswith(("docPr", "cNvPr"))):
                 v = el.get(attr)
                 nv = pseudo.replace_text(v)
                 if nv != v:
-                    el.set(attr, nv)
-                    n += 1
+                    try:
+                        el.set(attr, nv)
+                        n += 1
+                    except Exception:
+                        pass
     return n
 
 
@@ -203,6 +221,27 @@ def _cell_text(tc) -> str:
     return "\n".join(paragraph_text(p) for p in tc.iter(W + "p")).strip()
 
 
+def _is_valid_table_val(val: str, et: T) -> bool:
+    v = val.strip()
+    if len(v) < 3:
+        return False
+    words = [re.sub(r"[^\w]", "", w).lower() for w in v.split()]
+    words = [w for w in words if w]
+    if not words:
+        return False
+    if et is T.PERSON:
+        if all(w in NAME_STOP for w in words):
+            return False
+        if any(w in {"contact", "person", "secretary", "compliance", "officer", "director", "manager", "auditor", "shareholder", "promoter", "board", "company"} for w in words):
+            return False
+    elif et is T.ORG:
+        if all(w in NAME_STOP or w in GENERIC_ORG_WORDS for w in words):
+            return False
+        if v.lower() in {"company", "our company", "the company", "by our company", "against our company"}:
+            return False
+    return True
+
+
 def table_context_entities(root: etree._Element) -> Iterator[tuple[str, T]]:
     """Column-header ("DIN", "Name", "PAN"...) and row-key ("DIN | 00135070") table semantics."""
     for tbl in root.iter(W + "tbl"):
@@ -216,13 +255,14 @@ def table_context_entities(root: etree._Element) -> Iterator[tuple[str, T]]:
                 if j < len(rules) and rules[j] and cell:
                     et, rx = rules[j]
                     for line in ([cell] if et is T.ADDRESS else cell.split("\n")):
-                        if rx.search(line.strip()):
-                            yield line.strip(), et
+                        cand = line.strip()
+                        if rx.search(cand) and _is_valid_table_val(cand, et):
+                            yield cand, et
         for row in grid:  # key/value tables
             if len(row) >= 2 and row[0] and len(row[0]) < 40:
                 rule = classify_header(row[0])
                 if rule and row[1]:
                     et, rx = rule
-                    val = row[1].strip()
-                    if rx.search(val if et is T.ADDRESS else val.split("\n")[0]):
-                        yield (val if et is T.ADDRESS else val.split("\n")[0]), et
+                    cand = (row[1].strip() if et is T.ADDRESS else row[1].strip().split("\n")[0])
+                    if rx.search(cand) and _is_valid_table_val(cand, et):
+                        yield cand, et

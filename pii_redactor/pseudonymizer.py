@@ -133,6 +133,11 @@ class Pseudonymizer:
         toks = name.split()
         if not toks or any(not re.fullmatch(r"[A-Za-z][A-Za-z.'’\-]*", t) for t in toks):
             return
+        keys = [t.lower().strip(".'’") for t in toks]
+        if all(k in NAME_STOP for k in keys):
+            return
+        if any(k in {"contact", "person", "secretary", "compliance", "officer", "director", "manager", "auditor", "shareholder", "promoter", "board", "company"} for k in keys):
+            return
         # establish token roles from the full name (given ... surname)
         content = [t for t in toks if not re.fullmatch(r"[A-Za-z]\.?", t)]
         for i, t in enumerate(content):
@@ -149,11 +154,18 @@ class Pseudonymizer:
                 self.text_surfaces.setdefault(k, (T.PERSON, True))
 
     def _register_org(self, text: str) -> None:
-        self.text_surfaces[norm_text(text)] = (T.ORG, False)
+        nt = norm_text(text)
+        words = [re.sub(r"[^\w]", "", w).lower() for w in text.split()]
+        words = [w for w in words if w]
+        if not words or all(w in NAME_STOP or w in GENERIC_ORG_WORDS for w in words):
+            return
+        if nt in {"company", "our company", "the company", "by our company", "against our company", "limited", "pvt ltd"}:
+            return
+        self.text_surfaces[nt] = (T.ORG, False)
         for group in self._org_groups(text):
             g = " ".join(group)
             self._brand_for_group(group)
-            if len(g) >= 3 and g.lower() not in NAME_STOP and g.lower() not in COMMON_WORD_NAMES:
+            if len(g) >= 3 and g.lower() not in NAME_STOP and g.lower() not in COMMON_WORD_NAMES and g.lower() not in GENERIC_ORG_WORDS:
                 self.text_surfaces.setdefault(norm_text(g), (T.ORG, True))
 
     # ================================================================== surface -> fake

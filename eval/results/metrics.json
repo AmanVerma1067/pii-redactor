@@ -271,7 +271,7 @@
       "paragraphs": 106,
       "tables": 2,
       "runs": 116,
-      "run_format_signature": -952778194308119398,
+      "run_format_signature": -2817410286693724263,
       "images": 3,
       "hyperlinks": 1,
       "sections": 1
@@ -280,7 +280,7 @@
       "paragraphs": 106,
       "tables": 2,
       "runs": 116,
-      "run_format_signature": -952778194308119398,
+      "run_format_signature": -2817410286693724263,
       "images": 3,
       "hyperlinks": 1,
       "sections": 1
@@ -473,5 +473,5 @@
       "skipped": null
     }
   ],
-  "seconds": 3.17
+  "seconds": 2.91
 }

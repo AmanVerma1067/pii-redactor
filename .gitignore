@@ -8,4 +8,3 @@ eval/results/mapping.json
 mapping*.json
 report*.json
 .DS_Store
-*.log
