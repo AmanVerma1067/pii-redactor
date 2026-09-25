@@ -436,9 +436,15 @@ class Pseudonymizer:
             return key[0] + N(5) + rng.choice(STATE_CODES) + str(rng.randint(1950, 2022)) + key[12:15] + N(6)
         if etype is T.GSTIN and n == 15:
             return f"{rng.randint(1, 37):02d}" + self._value(T.PAN, key[2:12]) + key[12] + "Z" + rng.choice(U + D)
-        if etype is T.SEBI_REG and n == 12:
-            zeros = len(key[3:]) - len(key[3:].lstrip("0"))
-            return key[:3] + "0" * zeros + rng.choice("123456789") + N(8 - zeros)
+        if etype is T.SEBI_REG:
+            alpha_len = len(key) - len(key.lstrip(U))
+            prefix = key[:alpha_len]
+            num_part = key[alpha_len:]
+            zeros = len(num_part) - len(num_part.lstrip("0"))
+            digits_needed = len(num_part) - zeros - 1
+            if digits_needed >= 0:
+                return prefix + "0" * zeros + rng.choice("123456789") + N(digits_needed)
+            return prefix + N(len(num_part))
         if etype is T.DIN:
             zeros = len(key) - len(key.lstrip("0"))
             return "0" * zeros + rng.choice("123456789") + N(n - zeros - 1)

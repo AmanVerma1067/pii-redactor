@@ -9,7 +9,7 @@
         "fp": 0,
         "fn": 1,
         "fn_items": [
-          "Axis Bank Limited"
+          "Kotak Mahindra Capital Company"
         ],
         "fp_items": [],
         "precision": 1.0,
@@ -46,17 +46,113 @@
         "accuracy_csi": 0.5556
       },
       "Names": {
-        "tp": 15,
+        "tp": 14,
         "fp": 0,
-        "fn": 1,
+        "fn": 2,
         "fn_items": [
-          "rakhi shetty"
+          "rakhi shetty",
+          "Subbayya Gowda"
         ],
         "fp_items": [],
         "precision": 1.0,
-        "recall": 0.9375,
-        "f1": 0.9677,
-        "accuracy_csi": 0.9375
+        "recall": 0.875,
+        "f1": 0.9333,
+        "accuracy_csi": 0.875
+      },
+      "Contacts": {
+        "tp": 11,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "DOB": {
+        "tp": 8,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "Financial": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "ALL": {
+        "tp": 69,
+        "fp": 3,
+        "fn": 4,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 0.9583,
+        "recall": 0.9452,
+        "f1": 0.9517,
+        "accuracy_csi": 0.9079
+      }
+    },
+    "lenient": {
+      "Organizations": {
+        "tp": 7,
+        "fp": 0,
+        "fn": 1,
+        "fn_items": [
+          "Kotak Mahindra Capital Company"
+        ],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 0.875,
+        "f1": 0.9333,
+        "accuracy_csi": 0.875
+      },
+      "Identifiers": {
+        "tp": 21,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "Addresses": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "Names": {
+        "tp": 14,
+        "fp": 0,
+        "fn": 2,
+        "fn_items": [
+          "rakhi shetty",
+          "Subbayya Gowda"
+        ],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 0.875,
+        "f1": 0.9333,
+        "accuracy_csi": 0.875
       },
       "Contacts": {
         "tp": 11,
@@ -93,118 +189,26 @@
       },
       "ALL": {
         "tp": 70,
-        "fp": 3,
+        "fp": 0,
         "fn": 3,
         "fn_items": [],
         "fp_items": [],
-        "precision": 0.9589,
+        "precision": 1.0,
         "recall": 0.9589,
-        "f1": 0.9589,
-        "accuracy_csi": 0.9211
-      }
-    },
-    "lenient": {
-      "Organizations": {
-        "tp": 8,
-        "fp": 0,
-        "fn": 0,
-        "fn_items": [],
-        "fp_items": [],
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "accuracy_csi": 1.0
-      },
-      "Identifiers": {
-        "tp": 21,
-        "fp": 0,
-        "fn": 0,
-        "fn_items": [],
-        "fp_items": [],
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "accuracy_csi": 1.0
-      },
-      "Addresses": {
-        "tp": 6,
-        "fp": 0,
-        "fn": 0,
-        "fn_items": [],
-        "fp_items": [],
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "accuracy_csi": 1.0
-      },
-      "Names": {
-        "tp": 15,
-        "fp": 0,
-        "fn": 1,
-        "fn_items": [
-          "rakhi shetty"
-        ],
-        "fp_items": [],
-        "precision": 1.0,
-        "recall": 0.9375,
-        "f1": 0.9677,
-        "accuracy_csi": 0.9375
-      },
-      "Contacts": {
-        "tp": 11,
-        "fp": 0,
-        "fn": 0,
-        "fn_items": [],
-        "fp_items": [],
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "accuracy_csi": 1.0
-      },
-      "DOB": {
-        "tp": 8,
-        "fp": 0,
-        "fn": 0,
-        "fn_items": [],
-        "fp_items": [],
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "accuracy_csi": 1.0
-      },
-      "Financial": {
-        "tp": 3,
-        "fp": 0,
-        "fn": 0,
-        "fn_items": [],
-        "fp_items": [],
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "accuracy_csi": 1.0
-      },
-      "ALL": {
-        "tp": 72,
-        "fp": 0,
-        "fn": 1,
-        "fn_items": [],
-        "fp_items": [],
-        "precision": 1.0,
-        "recall": 0.9863,
-        "f1": 0.9931,
-        "accuracy_csi": 0.9863
+        "f1": 0.979,
+        "accuracy_csi": 0.9589
       }
     }
   },
   "leak_test": {
     "measurable": 75,
-    "leaked": 0,
-    "redaction_recall": 1.0,
+    "leaked": 1,
+    "redaction_recall": 0.9867,
     "per_class": {
       "Organizations": {
         "total": 8,
-        "leaked": 0,
-        "redaction_recall": 1.0
+        "leaked": 1,
+        "redaction_recall": 0.875
       },
       "Identifiers": {
         "total": 21,
@@ -237,8 +241,21 @@
         "redaction_recall": 1.0
       }
     },
-    "leaks": [],
-    "partial_token_leaks": []
+    "leaks": [
+      {
+        "value": "Kotak Mahindra Capital Company",
+        "type": "ORG",
+        "where": [
+          "text"
+        ],
+        "note": "no legal suffix"
+      }
+    ],
+    "partial_token_leaks": [
+      "Kotak (from 'Kotak Mahindra Capital Company')",
+      "Mahindra (from 'Kotak Mahindra Capital Company')",
+      "Gowda (from 'Subbayya Gowda')"
+    ]
   },
   "over_redaction": {
     "negatives_total": 43,
@@ -246,7 +263,7 @@
     "preservation_rate": 1.0
   },
   "consistency": {
-    "entities": 75,
+    "entities": 73,
     "inconsistent": {}
   },
   "structure": {
@@ -254,7 +271,7 @@
       "paragraphs": 106,
       "tables": 2,
       "runs": 116,
-      "run_format_signature": -8380257434365063227,
+      "run_format_signature": -952778194308119398,
       "images": 3,
       "hyperlinks": 1,
       "sections": 1
@@ -263,7 +280,7 @@
       "paragraphs": 106,
       "tables": 2,
       "runs": 116,
-      "run_format_signature": -8380257434365063227,
+      "run_format_signature": -952778194308119398,
       "images": 3,
       "hyperlinks": 1,
       "sections": 1
@@ -456,5 +473,5 @@
       "skipped": null
     }
   ],
-  "seconds": 3.15
+  "seconds": 3.17
 }
