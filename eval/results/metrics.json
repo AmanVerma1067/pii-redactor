@@ -1,0 +1,460 @@
+{
+  "document": "benchmark_rhp.docx",
+  "gt_entities": 75,
+  "negatives": 43,
+  "detection": {
+    "strict": {
+      "Organizations": {
+        "tp": 7,
+        "fp": 0,
+        "fn": 1,
+        "fn_items": [
+          "Axis Bank Limited"
+        ],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 0.875,
+        "f1": 0.9333,
+        "accuracy_csi": 0.875
+      },
+      "Identifiers": {
+        "tp": 21,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "Addresses": {
+        "tp": 5,
+        "fp": 3,
+        "fn": 1,
+        "fn_items": [
+          "saray dan shah, Katrauli, Poore Durgi, Phoolpur, Allahabad, UP 212402"
+        ],
+        "fp_items": [
+          "Allahabad, UP 212402 [ADDRESS]",
+          "Katrauli, Poore Durgi, Phoolpur, [ADDRESS]",
+          "saray dan shah, [ADDRESS]"
+        ],
+        "precision": 0.625,
+        "recall": 0.8333,
+        "f1": 0.7143,
+        "accuracy_csi": 0.5556
+      },
+      "Names": {
+        "tp": 15,
+        "fp": 0,
+        "fn": 1,
+        "fn_items": [
+          "rakhi shetty"
+        ],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 0.9375,
+        "f1": 0.9677,
+        "accuracy_csi": 0.9375
+      },
+      "Contacts": {
+        "tp": 11,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "DOB": {
+        "tp": 8,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "Financial": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "ALL": {
+        "tp": 70,
+        "fp": 3,
+        "fn": 3,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 0.9589,
+        "recall": 0.9589,
+        "f1": 0.9589,
+        "accuracy_csi": 0.9211
+      }
+    },
+    "lenient": {
+      "Organizations": {
+        "tp": 8,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "Identifiers": {
+        "tp": 21,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "Addresses": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "Names": {
+        "tp": 15,
+        "fp": 0,
+        "fn": 1,
+        "fn_items": [
+          "rakhi shetty"
+        ],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 0.9375,
+        "f1": 0.9677,
+        "accuracy_csi": 0.9375
+      },
+      "Contacts": {
+        "tp": 11,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "DOB": {
+        "tp": 8,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "Financial": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy_csi": 1.0
+      },
+      "ALL": {
+        "tp": 72,
+        "fp": 0,
+        "fn": 1,
+        "fn_items": [],
+        "fp_items": [],
+        "precision": 1.0,
+        "recall": 0.9863,
+        "f1": 0.9931,
+        "accuracy_csi": 0.9863
+      }
+    }
+  },
+  "leak_test": {
+    "measurable": 75,
+    "leaked": 0,
+    "redaction_recall": 1.0,
+    "per_class": {
+      "Organizations": {
+        "total": 8,
+        "leaked": 0,
+        "redaction_recall": 1.0
+      },
+      "Identifiers": {
+        "total": 21,
+        "leaked": 0,
+        "redaction_recall": 1.0
+      },
+      "Addresses": {
+        "total": 6,
+        "leaked": 0,
+        "redaction_recall": 1.0
+      },
+      "Names": {
+        "total": 18,
+        "leaked": 0,
+        "redaction_recall": 1.0
+      },
+      "Contacts": {
+        "total": 11,
+        "leaked": 0,
+        "redaction_recall": 1.0
+      },
+      "DOB": {
+        "total": 8,
+        "leaked": 0,
+        "redaction_recall": 1.0
+      },
+      "Financial": {
+        "total": 3,
+        "leaked": 0,
+        "redaction_recall": 1.0
+      }
+    },
+    "leaks": [],
+    "partial_token_leaks": []
+  },
+  "over_redaction": {
+    "negatives_total": 43,
+    "negatives_destroyed": [],
+    "preservation_rate": 1.0
+  },
+  "consistency": {
+    "entities": 75,
+    "inconsistent": {}
+  },
+  "structure": {
+    "input": {
+      "paragraphs": 106,
+      "tables": 2,
+      "runs": 116,
+      "run_format_signature": -8380257434365063227,
+      "images": 3,
+      "hyperlinks": 1,
+      "sections": 1
+    },
+    "output": {
+      "paragraphs": 106,
+      "tables": 2,
+      "runs": 116,
+      "run_format_signature": -8380257434365063227,
+      "images": 3,
+      "hyperlinks": 1,
+      "sections": 1
+    },
+    "identical": {
+      "paragraphs": true,
+      "tables": true,
+      "runs": true,
+      "run_format_signature": true,
+      "images": true,
+      "hyperlinks": true,
+      "sections": true
+    }
+  },
+  "images": [
+    {
+      "part": "/word/media/image1.png",
+      "size": [
+        1000,
+        620
+      ],
+      "id_document": true,
+      "ocr_words": 24,
+      "hits": [
+        {
+          "type": "PERSON",
+          "text": "SUGRIV SINGH",
+          "pseudonym": "ADAM GREEN",
+          "box": [
+            302,
+            377,
+            576,
+            402
+          ],
+          "rule": "id_label_nextline"
+        },
+        {
+          "type": "PERSON",
+          "text": "VISHAL SINGH",
+          "pseudonym": "ROY GREEN",
+          "box": [
+            300,
+            282,
+            570,
+            307
+          ],
+          "rule": "gazetteer"
+        },
+        {
+          "type": "PAN",
+          "text": "NBWPS1951N",
+          "pseudonym": "YVUPD2331F",
+          "box": [
+            383,
+            168,
+            685,
+            198
+          ],
+          "rule": "pan"
+        },
+        {
+          "type": "DOB",
+          "text": "06/05/2000",
+          "pseudonym": "11/07/2000",
+          "box": [
+            301,
+            472,
+            512,
+            500
+          ],
+          "rule": "dob"
+        }
+      ],
+      "faces": 0,
+      "qr_codes": 0,
+      "failsafe_blur": false,
+      "skipped": null
+    },
+    {
+      "part": "/word/media/image2.png",
+      "size": [
+        1100,
+        700
+      ],
+      "id_document": true,
+      "ocr_words": 30,
+      "hits": [
+        {
+          "type": "ADDRESS",
+          "text": "Katrauli, Poore Durgi, Phoolpur,",
+          "pseudonym": "Unit No. 65, Crescent Arcade, Station Road, Springfield",
+          "box": [
+            43,
+            470,
+            476,
+            497
+          ],
+          "rule": "id_address_block"
+        },
+        {
+          "type": "ADDRESS",
+          "text": "Allahabad, UP 212402",
+          "pseudonym": "Gat No. 175/13, Brookside 998137",
+          "box": [
+            40,
+            515,
+            348,
+            540
+          ],
+          "rule": "id_address_block"
+        },
+        {
+          "type": "ADDRESS",
+          "text": "saray dan shah,",
+          "pseudonym": "plot no. 136, brookside",
+          "box": [
+            451,
+            425,
+            670,
+            452
+          ],
+          "rule": "address_label"
+        },
+        {
+          "type": "AADHAAR",
+          "text": "2943 6593 3461",
+          "pseudonym": "8229 3917 8439",
+          "box": [
+            293,
+            308,
+            703,
+            343
+          ],
+          "rule": "aadhaar"
+        },
+        {
+          "type": "PERSON",
+          "text": "Sudhdan Khan",
+          "pseudonym": "Ethan Evans",
+          "box": [
+            230,
+            425,
+            438,
+            450
+          ],
+          "rule": "id_label_inline"
+        },
+        {
+          "type": "PERSON",
+          "text": "Meraj Khan",
+          "pseudonym": "Troy Evans",
+          "box": [
+            293,
+            126,
+            505,
+            159
+          ],
+          "rule": "gazetteer"
+        },
+        {
+          "type": "DOB",
+          "text": "12/12/1988",
+          "pseudonym": "06/11/1987",
+          "box": [
+            380,
+            181,
+            548,
+            206
+          ],
+          "rule": "dob"
+        }
+      ],
+      "faces": 0,
+      "qr_codes": 1,
+      "failsafe_blur": false,
+      "skipped": null
+    },
+    {
+      "part": "/docProps/thumbnail.jpeg",
+      "size": [
+        395,
+        512
+      ],
+      "id_document": false,
+      "ocr_words": 0,
+      "hits": [],
+      "faces": 0,
+      "qr_codes": 0,
+      "failsafe_blur": false,
+      "skipped": null
+    }
+  ],
+  "seconds": 3.15
+}

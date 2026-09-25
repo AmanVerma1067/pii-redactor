@@ -1,0 +1,15 @@
+[project]
+name = "pii-redactor"
+version = "1.0.0"
+description = "Consistent, format-preserving PII pseudonymization for .docx (text + embedded images)"
+requires-python = ">=3.10"
+readme = "README.md"
+
+[project.scripts]
+pii-redact = "pii_redactor.cli:main"
+
+[tool.setuptools]
+packages = ["pii_redactor"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

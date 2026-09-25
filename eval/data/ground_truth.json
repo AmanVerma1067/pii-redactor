@@ -1,0 +1,733 @@
+{
+  "entities": [
+    {
+      "value": "KSH International Limited",
+      "type": "ORG",
+      "where": [
+        "header",
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "U28129PN1979PLC141032",
+      "type": "CIN",
+      "where": [
+        "footer",
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "11/3, 11/4 and 11/5, Village Birdewadi, Chakan Industrial Area, Phase II, Chakan, Taluka Khed, Pune 410 501, Maharashtra, India",
+      "type": "ADDRESS",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Plot No. T-9, MIDC Taloja Industrial Area, Taloja, Raigad 410 208, Maharashtra, India",
+      "type": "ADDRESS",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Anjali Kulkarni",
+      "type": "PERSON",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "+91 20 45053237",
+      "type": "PHONE",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "cs.connect@kshinternational.com",
+      "type": "EMAIL",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "www.kshinternational.com",
+      "type": "URL",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "KUSHAL SUBBAYYA HEGDE",
+      "type": "PERSON",
+      "where": [
+        "text",
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "PUSHPA KUSHAL HEGDE",
+      "type": "PERSON",
+      "where": [
+        "text",
+        "table",
+        "tracked-change"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "RAJESH KUSHAL HEGDE",
+      "type": "PERSON",
+      "where": [
+        "text",
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "ROHIT KUSHAL HEGDE",
+      "type": "PERSON",
+      "where": [
+        "text",
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "00135070",
+      "type": "DIN",
+      "where": [
+        "text",
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Rakhi Girija Shetty",
+      "type": "PERSON",
+      "where": [
+        "text",
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Hegde",
+      "type": "PERSON",
+      "where": [
+        "text"
+      ],
+      "detect": false,
+      "note": "surname-only back-reference"
+    },
+    {
+      "value": "AAEPH4521K",
+      "type": "PAN",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "14/02/1951",
+      "type": "DOB",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "00114193",
+      "type": "DIN",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "AAFPH7832M",
+      "type": "PAN",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "22/08/1955",
+      "type": "DOB",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "00134926",
+      "type": "DIN",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "ABCPH1298Q",
+      "type": "PAN",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "03/11/1978",
+      "type": "DOB",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "03124510",
+      "type": "DIN",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "ABDPH5567R",
+      "type": "PAN",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "19/06/1982",
+      "type": "DOB",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "07891234",
+      "type": "DIN",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "AXKPS3321L",
+      "type": "PAN",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "09/01/1980",
+      "type": "DOB",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Rohit Hegde",
+      "type": "PERSON",
+      "where": [
+        "comment-author"
+      ],
+      "detect": false,
+      "note": ""
+    },
+    {
+      "value": "Nuvama Wealth Management Limited",
+      "type": "ORG",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "801-804, Wing A, Building No. 3, Inspire BKC, G Block, Bandra Kurla Complex, Bandra East, Mumbai 400 051, Maharashtra, India",
+      "type": "ADDRESS",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "+91 22 4009 4400",
+      "type": "PHONE",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "ksh.ipo@nuvama.com",
+      "type": "EMAIL",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Manish Tejwani",
+      "type": "PERSON",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "INM000013004",
+      "type": "SEBI_REG",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "ICICI Securities Limited",
+      "type": "ORG",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "ICICI Venture House, Appasaheb Marathe Marg, Prabhadevi, Mumbai 400 025, Maharashtra, India",
+      "type": "ADDRESS",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "+91 22 6807 7100",
+      "type": "PHONE",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "ksh.ipo@icicisecurities.com",
+      "type": "EMAIL",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Rupesh Khant",
+      "type": "PERSON",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "INM000011179",
+      "type": "SEBI_REG",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "MUFG Intime India Private Limited",
+      "type": "ORG",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Link Intime India Private Limited",
+      "type": "ORG",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "C-101, 1st Floor, 247 Park, L.B.S. Marg, Vikhroli (West), Mumbai 400 083, Maharashtra, India",
+      "type": "ADDRESS",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "+91 81081 14949",
+      "type": "PHONE",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "kshinternational.ipo@in.mpms.mufg.com",
+      "type": "EMAIL",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Shanti Gopalkrishnan",
+      "type": "PERSON",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "INR000004058",
+      "type": "SEBI_REG",
+      "where": [
+        "table"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Axis Bank Limited",
+      "type": "ORG",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "912020045678123",
+      "type": "BANK_ACCOUNT",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "UTIB0000123",
+      "type": "IFSC",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "27AAACK1234F1Z5",
+      "type": "GSTIN",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "4111 1111 1111 1111",
+      "type": "CREDIT_CARD",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "203.0.113.77",
+      "type": "IP_ADDRESS",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "10.24.8.199",
+      "type": "IP_ADDRESS",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "123-45-6789",
+      "type": "SSN",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "19 June 1982",
+      "type": "DOB",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Z4829173",
+      "type": "PASSPORT",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Rashi Patil",
+      "type": "PERSON",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "rashhi.patil@gmail.com",
+      "type": "EMAIL",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "+91 98765 43210",
+      "type": "PHONE",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "M S K A & Associates",
+      "type": "ORG",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Kotak Mahindra Capital Company",
+      "type": "ORG",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": "no legal suffix"
+    },
+    {
+      "value": "rakhi shetty",
+      "type": "PERSON",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": "lower-case name"
+    },
+    {
+      "value": "Subbayya Gowda",
+      "type": "PERSON",
+      "where": [
+        "text"
+      ],
+      "detect": true,
+      "note": "no honorific, not in gazetteer"
+    },
+    {
+      "value": "NBWPS1951N",
+      "type": "PAN",
+      "where": [
+        "image"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "VISHAL SINGH",
+      "type": "PERSON",
+      "where": [
+        "image"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "SUGRIV SINGH",
+      "type": "PERSON",
+      "where": [
+        "image"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "06/05/2000",
+      "type": "DOB",
+      "where": [
+        "image"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Meraj Khan",
+      "type": "PERSON",
+      "where": [
+        "image"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "12/12/1988",
+      "type": "DOB",
+      "where": [
+        "image"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "2943 6593 3461",
+      "type": "AADHAAR",
+      "where": [
+        "image"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "Sudhdan Khan",
+      "type": "PERSON",
+      "where": [
+        "image"
+      ],
+      "detect": true,
+      "note": ""
+    },
+    {
+      "value": "saray dan shah, Katrauli, Poore Durgi, Phoolpur, Allahabad, UP 212402",
+      "type": "ADDRESS",
+      "where": [
+        "image"
+      ],
+      "detect": true,
+      "note": ""
+    }
+  ],
+  "negatives": [
+    "September 10, 2025",
+    "BSE Limited",
+    "National Stock Exchange of India Limited",
+    "SEBI ICDR Regulations",
+    "Companies Act, 2013",
+    "Registrar of Companies",
+    "INE0ABC01018",
+    "1,84,89,583",
+    "₹7,100.00 million",
+    "Price Band",
+    "September 16, 2025",
+    "February 13, 1979",
+    "Section 2(76)",
+    "Reserve Bank of India",
+    "18.45%",
+    "4,012.37",
+    "245",
+    "Anchor Investor Bid/Offer Period means one Working Day prior to the Bid/Offer Opening Date.",
+    "The Selling Shareholders, severally and not jointly, confirm that the Offered Shares are eligible for the Offer for Sale.",
+    "ASBA Bidders must provide the details of their ASBA Account in the Bid cum Application Form.",
+    "The Designated Stock Exchange for the purpose of the Offer is NSE.",
+    "Qualified Institutional Buyers, Non-Institutional Investors and Retail Individual Investors may participate in the Offer.",
+    "Our Board of Directors approved the Offer pursuant to a resolution dated July 15, 2025.",
+    "The Registrar to the Offer shall ensure that refunds are credited within two Working Days.",
+    "Restated Consolidated Financial Information for Fiscals 2025, 2024 and 2023 has been prepared under Ind AS.",
+    "Key Managerial Personnel and Senior Management Personnel are disclosed in Our Management on page 231.",
+    "Capital expenditure of ₹ 1,234.56 million is proposed for the Supa Facility and the Chakan Facility.",
+    "Earnings per Equity Share (Basic and Diluted) for Fiscal 2025 was ₹ 12.34.",
+    "Return on Net Worth was 18.52% and EBITDA Margin was 11.20% in Fiscal 2025.",
+    "Helpline timings are 10:00 a.m. to 5:00 p.m. IST on all Working Days.",
+    "The Offer is being made through the Book Building Process in terms of Rule 19(2)(b) of the SCRR read with Regulation 31 of the SEBI ICDR Regulations.",
+    "The magnet winding wire market in India is expected to grow at a CAGR of 12-13% between Fiscal 2025 and Fiscal 2030 as per the Industry Report.",
+    "Our manufacturing facilities are spread over approximately 2,43,000 square meters.",
+    "The Company Secretary and Compliance Officer is responsible for redressal of investor grievances.",
+    "The Draft Red Herring Prospectus dated March 31, 2025 was filed with SEBI.",
+    "Minimum Promoters' Contribution shall be locked-in for a period of 18 months from the date of Allotment.",
+    "Wilful Defaulter or Fraudulent Borrower has the meaning ascribed to it under the SEBI ICDR Regulations.",
+    "UPI Bidders may bid using the UPI Mechanism for an application value of up to ₹ 5,00,000.",
+    "Annual return in Form No. MGT-7 has been filed under Section 92 of the Companies Act, 2013.",
+    "The ERP system was upgraded to version 2.1.4.0 during Fiscal 2024.",
+    "Holding Company, Material Subsidiary and Group Company have the meanings given in the SEBI ICDR Regulations.",
+    "The Hon'ble Supreme Court of India and the High Court of Bombay have not passed any adverse order.",
+    "Our order book as of June 30, 2025 was ₹ 9,876.54 million across 1,245 customers in 27 countries."
+  ]
+}

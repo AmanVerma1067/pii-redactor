@@ -1,0 +1,3 @@
+-r requirements.txt
+pytest>=8
+segno>=1.5
