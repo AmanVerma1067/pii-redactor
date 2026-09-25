@@ -1,6 +1,7 @@
 """Deterministic pattern recognizers (regex + validators + context words)."""
 from __future__ import annotations
 
+import datetime
 import re
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Iterator
@@ -16,6 +17,9 @@ DATE = (rf"(?:\d{{1,2}}[/\-.]\d{{1,2}}[/\-.](?:\d{{4}}|\d{{2}})"
         rf"|\d{{1,2}}(?:st|nd|rd|th)?{WS}+{MONTHS}\.?,?{WS}+\d{{4}}"
         rf"|{MONTHS}\.?{WS}+\d{{1,2}}(?:st|nd|rd|th)?,?{WS}+\d{{4}})")
 DATE_RE = re.compile(rf"(?<![\w/.-]){DATE}(?![\w/-])", re.I)
+MIN_BIRTH_YEAR = 1920
+# "Tel: 91-20-2721 8080" parses as dd-mm-yyyy; a date right after a phone/fax label is never a birth date
+PHONE_LABEL_BEFORE = re.compile(r"(?i)\b(?:tel(?:ephone)?|fax|phone|ph|mob(?:ile)?)\.?\s*(?:no\.?\s*)?[:\-]?\s*\+?$")
 
 
 @dataclass
@@ -79,6 +83,23 @@ def _aadhaar_ok_factory():
     return ok
 
 
+def _dob_ok(val: str) -> bool:
+    """Reject impossible dates: day 1-31, month 1-12, four-digit year within a plausible birth range."""
+    nums = [int(n) for n in re.findall(r"\d+", val)]
+    year = next((n for n in nums if n >= 100), None)
+    if year is not None and not MIN_BIRTH_YEAR <= year <= datetime.date.today().year:
+        return False
+    if re.match(r"\d{1,2}[/\-.]\d{1,2}[/\-.]", val):
+        a, b = nums[0], nums[1]
+        return 1 <= a <= 31 and 1 <= b <= 31 and min(a, b) <= 12
+    day = next((n for n in nums if n < 100), None)
+    return day is None or 1 <= day <= 31
+
+
+def _dob_not_phone(text: str, s: int, e: int) -> tuple[int, int] | None:
+    return None if PHONE_LABEL_BEFORE.search(text[max(0, s - 20):s]) else (s, e)
+
+
 def build_pattern_recognizers() -> list[PatternRecognizer]:
     R = PatternRecognizer
     c = re.compile
@@ -117,7 +138,7 @@ def build_pattern_recognizers() -> list[PatternRecognizer]:
         # ---- dates of birth: only with a DOB cue (or anywhere on an ID-card image)
         R("dob", T.DOB, DATE_RE, 0.9,
           context=("dob", "d.o.b", "date of birth", "birth date", "born on", "born", "year of birth", "yob", "जन्म"),
-          context_window=45, context_bypass_in_id_image=True),
+          context_window=45, context_bypass_in_id_image=True, validator=_dob_ok, postprocess=_dob_not_phone),
     ]
 
 

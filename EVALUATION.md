@@ -1,239 +1,184 @@
-# 📊 Empirical Evaluation Strategy & Benchmark Report
+# Evaluation Strategy & Metric Report
 
-> **Evaluation Framework Note (Scaler AI Labs)**: This evaluation report provides an empirical, mathematically rigorous benchmark of the PII Redaction & Pseudonymization Engine against both an annotated ground-truth benchmark (`eval/data/benchmark_rhp.docx` + `eval/data/ground_truth.json`) and the official 400+ page `Red Herring Prospectus.docx`.
+> **Two evaluations.** Precision, recall and F1 (sections 3.1–3.4) are measured on the annotated
+> **RHP-style benchmark** (`eval/data/benchmark_rhp.docx` + `ground_truth.json`, 75 entities, 43
+> false-positive traps), which reproduces the entity types and layouts of the KSH International RHP.
+> The **real `Red Herring Prospectus.docx`** (section 3.5) has no ground truth, so it is reported with run
+> statistics, a structural diff and an automated self-leak audit. P/R/F1 on it need the annotation
+> workflow in section 6.
 
----
+## 1. What we measure (and why)
 
-## 1. Mathematical Evaluation Framework
+| Question | Metric | How |
+|---|---|---|
+| Did we *find* the PII? | Precision / Recall / F1 per class | Entity-level on unique values. **Strict** = normalised string equality. **Lenient** = containment (≥50% length) or, for addresses, ≥80% token coverage by same-class pieces (OCR splits addresses into lines) |
+| "Accuracy" | TP/(TP+FP+FN) | Span extraction has no meaningful true negatives, so classic accuracy is undefined. We report the Jaccard/CSI form instead |
+| Did PII *leave* the file? | End-to-end redaction recall | Every GT value, including back-references ("Mr. Hegde"), comment authors and tracked deletions, is searched for in the **output package**: re-joined paragraph text, every other XML text node and attribute, hyperlink targets, and **OCR of the output images** |
+| Partial leaks | Token leak list | Does any distinctive token of a name/org (≥4 chars) survive anywhere? |
+| Did we destroy non-PII? | Over-redaction rate | 43 trap strings (statutory terms, exchanges, ISIN, ₹ amounts, offer dates, section numbers, version numbers, 26 boilerplate RHP sentences) must survive verbatim |
+| Consistency | 1 pseudonym per entity | Each normalised original maps to exactly one fake across text, tables, headers, links and images |
+| Formatting | Structural diff | Same paragraphs, tables, runs, **run-property signature**, images, hyperlinks and sections before and after |
 
-Information extraction on unstructured legal prose lacks a well-defined definition of true negatives (every non-entity character is trivially unselected). Therefore, the evaluation protocol establishes entity-level classification over unique canonical values:
+Detection vs leak test: detection scores the detector alone. The leak test scores the **product**: two-pass
+propagation, hyperlinks, metadata and images included. A detection miss can still be redacted (`rakhi shetty`),
+and a detection hit can still leak if the writer fails (never observed: see section 4).
 
-$$\text{Precision} = \frac{TP}{TP + FP}$$
+## 2. Benchmark dataset (annotated ground truth)
 
-$$\text{Recall} = \frac{TP}{TP + FN}$$
+`eval/build_benchmark.py` annotates every PII value at the moment it's written, so the ground truth can't drift.
 
-$$F_1 = \frac{2 \cdot \text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}} = \frac{2 \cdot TP}{2 \cdot TP + FP + FN}$$
+* **75 annotated entities**: 18 names (including ALL-CAPS cover-page promoters, a split-run name, a lower-case
+  name, an unseen name, a surname-only back-reference, a tracked-change author, a comment author and 4 names on ID scans), 8 organisations,
+  21 identifiers (CIN in body + footer, 5 DINs, 6 PANs, 3 SEBI numbers, GSTIN, Aadhaar, passport, SSN, 2 IPs),
+  3 financial, 6 addresses (including a 3-line address on an Aadhaar scan), 11 contacts (including a `mailto:` hyperlink whose text is split
+  across 3 runs), 8 dates of birth (table, prose and scans).
+* **Locations**: body, tables (column-header and key/value), header, footer, hyperlink targets, `w:del` tracked
+  deletion, comment author, 2 embedded PNG ID cards (one with a QR code).
+* **43 negative traps** (see section 1).
 
-$$\text{Accuracy (Critical Success Index / Jaccard)} = \frac{TP}{TP + FP + FN}$$
+## 3. Results
 
-### Matching Criteria
+### 3.1 Detection: lenient matching (primary)
 
-1. **Strict Matching**: Requires exact normalized character-sequence equality:
-   $$\text{norm}(s) = \text{strip}(\text{lowercase}(s))$$
-   For alphanumeric identifiers (PAN, CIN, DIN, Aadhaar), formatting punctuation (spaces, dashes) is stripped.
-2. **Lenient Matching (Primary)**: Defines true positives under containment or multi-line coverage:
-   - String containment with length overlap $\ge 50\%$:
-     $$\frac{\min(|s_1|, |s_2|)}{\max(|s_1|, |s_2|)} \ge 0.5$$
-   - Address token coverage $\ge 80\%$ across segmented OCR lines (essential for scanned Aadhaar cards where the physical address is broken across 3 printed lines).
+| Class | TP | FP | FN | Precision | Recall | F1 | Accuracy (TP/(TP+FP+FN)) |
+|---|---|---|---|---|---|---|---|
+| Names | 14 | 0 | 2 | 1.000 | 0.875 | 0.933 | 0.875 |
+| Organizations | 7 | 0 | 1 | 1.000 | 0.875 | 0.933 | 0.875 |
+| Identifiers | 21 | 0 | 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| Financial | 3 | 0 | 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| Addresses | 6 | 0 | 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| Contacts | 11 | 0 | 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| DOB | 8 | 0 | 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| **ALL (micro)** | 70 | 0 | 3 | 1.000 | 0.959 | 0.979 | 0.959 |
 
-### End-to-End Leak Testing (Redaction Recall)
+### 3.2 Detection: strict matching
 
-$$\text{Redaction Recall} = \frac{\text{Measurable Entities Removed}}{\text{Total Measurable Ground-Truth Entities}} = 1 - \frac{\text{Leaked Entities}}{\text{Measurable Entities}}$$
+| Class | TP | FP | FN | Precision | Recall | F1 | Accuracy (TP/(TP+FP+FN)) |
+|---|---|---|---|---|---|---|---|
+| Names | 14 | 0 | 2 | 1.000 | 0.875 | 0.933 | 0.875 |
+| Organizations | 7 | 0 | 1 | 1.000 | 0.875 | 0.933 | 0.875 |
+| Identifiers | 21 | 0 | 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| Financial | 3 | 0 | 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| Addresses | 5 | 3 | 1 | 0.625 | 0.833 | 0.714 | 0.556 |
+| Contacts | 11 | 0 | 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| DOB | 8 | 0 | 0 | 1.000 | 1.000 | 1.000 | 1.000 |
+| **ALL (micro)** | 69 | 3 | 4 | 0.958 | 0.945 | 0.952 | 0.908 |
 
-Every ground-truth entity is systematically audited in the final `.docx` package by re-extracting:
-- Concatenated text from all paragraph `<w:t>` elements
-- Non-run XML nodes (`<w:delText>`, `<w:instrText>`, alt-text `<w:descr>`)
-- DrawingML chart labels and document properties (`/docProps/core.xml`, `/docProps/app.xml`)
-- External hyperlink target URIs (`r:id` relationships)
-- **Tesseract OCR re-extraction on all modified embedded media images**
+The only strict-vs-lenient gap is the Aadhaar address: OCR returns it as three lines, and we (correctly) redact
+three pieces. Strict string equality counts that as 3 FP + 1 FN. It is a segmentation artefact, not an error.
 
----
+### 3.3 End-to-end leak test (output file, including OCR of repainted images)
 
-## 2. Benchmark Dataset Profile (`benchmark_rhp.docx`)
+**74/75 PII values removed: redaction recall 0.987**
 
-The benchmark document reproduces the complex corporate and statutory topology of the KSH International prospectus, synthesized with deliberate edge cases and false-positive traps:
+| Class | Values | Leaked | Redaction recall |
+|---|---|---|---|
+| Names | 18 | 0 | 1.000 |
+| Organizations | 8 | 1 | 0.875 |
+| Identifiers | 21 | 0 | 1.000 |
+| Financial | 3 | 0 | 1.000 |
+| Addresses | 6 | 0 | 1.000 |
+| Contacts | 11 | 0 | 1.000 |
+| DOB | 8 | 0 | 1.000 |
 
-- **Total Ground-Truth Entities**: **75**
-- **Negative Traps (False-Positive Stress Test)**: **43**
-- **Granular Taxonomy (19 Types)**:
-  - `PERSON` (18): Promoters (ALL-CAPS, mixed case, split runs), KMPs, directors, comment author, tracked-change author, and ID card scans.
-  - `ORG` (8): Statutory auditors, merchant bankers, registrars, and group companies.
-  - `IDENTIFIERS` (21): Corporate Identity Numbers (CIN), Director Identification Numbers (DIN), PANs, Aadhaar numbers, SEBI registration codes, GSTIN, Passports, SSNs, and IP addresses.
-  - `FINANCIAL` (3): Bank accounts, IFSC codes, Corporate credit cards.
-  - `ADDRESS` (6): Multi-line registered offices, MIDC industrial zones, residential addresses.
-  - `CONTACTS` (11): Telephone numbers (landline, mobile, toll-free, international), RFC-compliant emails, corporate website URLs.
-  - `DOB` (8): Dates of birth formatted across numeric delimiters and textual month names.
+Full-string leaks: `Kotak Mahindra Capital Company`.
+Partial token leaks: `Kotak (from 'Kotak Mahindra Capital Company')`, `Mahindra (from 'Kotak Mahindra Capital Company')`, `Gowda (from 'Subbayya Gowda')`.
 
----
+### 3.4 Over-redaction, consistency, formatting
+* Negative traps preserved: **43/43**.
+* One pseudonym per entity across all locations and modalities: **yes** (0 inconsistencies). `VISHAL SINGH` on the PAN
+  scan and any text mention share one fake. `Hegde` maps to the same fake surname in every variant (full name, ALL-CAPS, `Mr. Hegde`, tracked change).
+* Structure identical: **yes**. Same paragraphs, tables, runs and run formatting, plus images, hyperlinks and sections.
+  The split-run name `Kus|hal Subbayya |Hegde` (bold | italic | plain) becomes `Albert | Thomas | Allen` with the
+  same bold/italic/plain runs.
+* Runtime: 1.41s for the benchmark incl. OCR. About 5s per 3.6k paragraphs without OCR, so a 400-page RHP should take
+  well under a minute plus ~1–2s per embedded image.
 
-## 3. Tabular Benchmark Results
+### 3.5 Real `Red Herring Prospectus.docx` (full document, no ground truth)
 
-### 3.1 Detection: Lenient Matching (Primary Extraction)
+| Metric | Value |
+|---|---|
+| Unique entities pseudonymized | **282** (Names 77, Organizations 79, Addresses 42, Contacts 64, Identifiers 18, DOB 2) |
+| Run-level text replacements | **736** paragraph spans, plus 79 other XML nodes (fields, tracked changes, properties) |
+| Embedded images | 8 scanned: 2 ID cards redacted, 6 logos/graphics left unchanged (4 below 120 px) |
+| Image regions redacted | **12** OCR text regions + **2** holder photos + **2** QR codes |
+| PAN card | name, father's name, PAN, DOB replaced. Photo and QR pixelated |
+| Aadhaar card | name, father's name, DOB, Aadhaar no. (front and back), address replaced. Photo and QR pixelated |
+| XML integrity | 160 XML parts, **0** parse errors, zip CRC clean, re-opens in python-docx |
+| Structure | identical: 4,561 paragraphs, 76 tables, 48,819 runs, same run-format signature, 8 images, 85 sections |
+| Output size | 1.61 MB (input 1.84 MB) |
+| Runtime | 15.8 s including OCR |
 
-| Evaluation Class | True Positives (TP) | False Positives (FP) | False Negatives (FN) | Precision | Recall | $F_1$-Score | Accuracy (CSI) |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Names** | 14 | 0 | 2 | **1.0000** | 0.8750 | 0.9333 | 0.8750 |
-| **Organizations** | 7 | 0 | 1 | **1.0000** | 0.8750 | 0.9333 | 0.8750 |
-| **Identifiers** | 21 | 0 | 0 | **1.0000** | **1.0000** | **1.0000** | **1.0000** |
-| **Financial** | 3 | 0 | 0 | **1.0000** | **1.0000** | **1.0000** | **1.0000** |
-| **Addresses** | 6 | 0 | 0 | **1.0000** | **1.0000** | **1.0000** | **1.0000** |
-| **Contacts** | 11 | 0 | 0 | **1.0000** | **1.0000** | **1.0000** | **1.0000** |
-| **DOB** | 8 | 0 | 0 | **1.0000** | **1.0000** | **1.0000** | **1.0000** |
-| **ALL (Micro Aggregate)** | **70** | **0** | **3** | **1.0000** | **0.9589** | **0.9790** | **0.9589** |
+**Self-leak audit** (`eval/self_audit.py`). Each of the 282 detected originals is searched for in the output
+package with the benchmark's leak matcher (paragraph text, other XML text/attributes, link targets, OCR of
+output images). **272/282 are gone. 10 still match:**
 
-* **False Negatives (3)**:
-  - `Organizations`: `"Kotak Mahindra Capital Company"` (missed due to lack of standard corporate legal suffix `Limited` / `LLP`).
-  - `Names`: `"rakhi shetty"` (lowercase variant), `"Subbayya Gowda"` (unseen surname with no honorific or contextual label).
-* **False Positives (0)**: **Zero false positives across all 7 evaluation classes.**
+* 7 office-address variants (registered office in Birdewadi/Chakan, corporate office in Baner, BRLM office at
+  Inspire BKC). The detected form was replaced, but the same address also appears written differently
+  (`Tower-2` vs `Tower 2`, `Building No.` vs `No`, split across table cells or lines), and those copies survive.
+  **Real leak.**
+* `State Bank of India`: registered, but one occurrence (`State Bank of India, Industrial Finance…`) survives.
+* `Account Bank` (from `Public Offer Account Bank`) and `Registrar of Companies, Maharashtra at Pune` (tagged
+  ADDRESS) are detector false positives. Their text surviving is the correct outcome.
 
----
+The audit only checks values the detector found. PII the detector never saw needs a ground truth (section 6).
 
-### 3.2 Detection: Strict Matching
+## 4. Error analysis
 
-| Evaluation Class | True Positives (TP) | False Positives (FP) | False Negatives (FN) | Precision | Recall | $F_1$-Score | Accuracy (CSI) |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Names** | 14 | 0 | 2 | 1.0000 | 0.8750 | 0.9333 | 0.8750 |
-| **Organizations** | 7 | 0 | 1 | 1.0000 | 0.8750 | 0.9333 | 0.8750 |
-| **Identifiers** | 21 | 0 | 0 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
-| **Financial** | 3 | 0 | 0 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
-| **Addresses** | 5 | 3 | 1 | 0.6250 | 0.8333 | 0.7143 | 0.5556 |
-| **Contacts** | 11 | 0 | 0 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
-| **DOB** | 8 | 0 | 0 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
-| **ALL (Micro Aggregate)** | **69** | **3** | **4** | **0.9583** | **0.9452** | **0.9517** | **0.9079** |
+### 4.1 False negatives (PII that got through, or nearly did)
+| Case | Why it was missed | Impact | Fix |
+|---|---|---|---|
+| `Kotak Mahindra Capital Company` | No legal suffix (`Limited`/`Ltd`/`LLP`) and never seen elsewhere with one, so nothing to propagate from | **Full leak** (org) | Enable spaCy ORG, add a curated org gazetteer (SEBI intermediary list), or accept `<Distinctive> ... Company` with ≥2 non-generic tokens |
+| `Subbayya Gowda` | Neither token is in the gazetteer, no honorific, no label | **Partial leak**: `Subbayya` is replaced by propagation (seen in a promoter's name), `Gowda` survives | spaCy PERSON, a larger surname list, or a "capitalised bigram next to a known name token" rule |
+| `rakhi shetty` | Lower-case, so every case-sensitive name rule skips it | **No leak**: pass 2 matches the registered first+last variant of `Rakhi Girija Shetty` case-insensitively | (Shows why the two-pass design matters) |
 
-#### Strict vs. Lenient Discrepancy Analysis
-The sole difference between strict and lenient evaluation occurs in `Addresses`. On the embedded scanned Aadhaar card, the physical address is laid out over three separate lines:
-1. `saray dan shah, KATRAULI,`
-2. `Poore Durgi, Phoolpur,`
-3. `Allahabad, UP 212402`
+What leaks or would leak on the *real* RHP, ranked by risk:
+1. Office addresses repeated with different punctuation/line breaks (seen in section 3.5). Fix: token-normalised
+   address propagation (hyphens, `No.`/`No`, cell and line joins) in pass 2.
+2. People named only in running prose with no honorific or label and uncommon names (KMP bios, litigation sections). Mitigation: spaCy + review of `report.json` detections.
+3. Organisations without a suffix (group companies, customers, lenders referred to by brand). Same mitigation as above.
+4. Low-resolution or rotated scans. Mitigation: 2x upscale, psm-11 retry, and the fail-safe blur on ID-looking images with no hits.
+5. Hindi-script names on the Aadhaar/PAN card. On the real RHP, the Devanagari name, father's name and address on
+   the Aadhaar card stay readable with the default `eng` OCR. Mitigation: `--ocr-lang eng+hin` (installed via
+   `packages.txt`/Dockerfile).
 
-Tesseract OCR detects three distinct bounding boxes. The engine masks all three boxes individually. Under strict string matching, segmenting one address into three sub-spans is scored as 3 False Positives and 1 False Negative. Under lenient matching, multi-piece token coverage reaches 100%, accurately reflecting complete visual redaction.
+### 4.2 False positives (non-PII that we changed)
+| Trap / case | Outcome | Mechanism |
+|---|---|---|
+| `SEBI ICDR Regulations`, `Companies Act, 2013`, `Section 2(76)`, `Rule 19(2)(b)` | preserved | Name/org rules need a gazetteer name, honorific or legal suffix. Statutory vocabulary is in `NAME_STOP` |
+| `BSE Limited`, `National Stock Exchange of India Limited`, `Reserve Bank of India`, `Supreme Court of India` | preserved | Public-institution allowlist (policy: not personal data) |
+| `INE0ABC01018` (ISIN) vs SEBI reg. pattern `IN?#########` | preserved | `INE` prefix excluded. ISINs contain letters after the prefix |
+| `1,84,89,583`, `₹7,100.00 million`, `2,43,000`, `₹ 5,00,000` | preserved | Comma/decimal-aware lookarounds on every numeric pattern (Indian lakh grouping) |
+| Offer and incorporation dates (`September 16, 2025`, `February 13, 1979`) | preserved | Dates are only redacted with a birth cue (`DOB`, `born on`) or on an ID-card image |
+| `Tel: 91-20-2721 8080` on the PAN card reverse | **was an FP in v1.0** (read as DOB `91-20-2721`), **fixed** | DOB values must be real dates (day ≤ 31, month ≤ 12, year 1920–current), and a date right after `Tel`/`Fax`/`Phone`/`Mobile` is never a DOB |
+| `version 2.1.4.0` vs IPv4 | preserved | IP validator requires a real address with at least one octet > 9 |
+| `Company Secretary and Compliance Officer is responsible…` | **was an FP in v0** (`is responsible` → PERSON), **fixed** | Found by the stress section: the label rule accepted any text after `Compliance Officer`. Now it needs an explicit `:`/`-` separator or a capitalised value. v0 preserved 42/43 traps, v1 preserves 43/43 |
 
----
+Known FP risks on the real RHP that the benchmark doesn't cover:
+* Surname-only gazetteer rule: a capitalised word followed by a common surname (e.g. a place or a product like `Shah Industrial`) can come out as PERSON.
+* Token propagation replaces *any* capitalised occurrence of a registered name token (e.g. a second, unrelated `Singh`).
+  Privacy-safe, but it changes meaning.
+* PIN-anchored addresses: a 6-digit number near an address cue word (e.g. a plot area) could be read as a PIN.
+* spaCy (if enabled) will add ORG false positives on defined terms. The adapter drops single-token and all-generic
+  entities, but it can't remove them all. This is why it's off by default.
 
-### 3.3 End-to-End Redaction Leak Test
+## 5. Iteration log (how the numbers moved)
+| Version | Change | Lenient F1 | Redaction recall | Traps preserved |
+|---|---|---|---|---|
+| v0.1 | first end-to-end run | 0.930 | 0.960 | 17/17 |
+| v0.2 | IP lookahead (`… 10.24.8.199.`), bank-account `,` lookahead, context-gated passport `[A-Z]`, split `S/O <name>` out of OCR addresses | 0.979 | 0.987 | 17/17 |
+| v0.3 | +26 boilerplate RHP sentences (stress set) exposed the `is responsible` label FP | 0.972 | 0.987 | 42/43 |
+| v1.0 | label rule needs explicit separator or capitalised value; word-aligned run formatting | 0.979 | 0.987 | 43/43 |
+| v1.1 | ID photos: Haar faces (raw + equalised) widened to the photo frame, PAN/Aadhaar layout fallback; QR fallback for blurred codes; DOB date validation + phone-label guard; OpenCV pinned < 5 (5.0 drops `CascadeClassifier`) | **0.979** | **0.987** | **43/43** |
 
-| Evaluation Class | Total Ground-Truth Values | Leaked Values | Redaction Recall |
-|---|:---:|:---:|:---:|
-| **Names** | 18 | 0 | **1.0000 (100.0%)** |
-| **Organizations** | 8 | 1 | **0.8750 (87.5%)** |
-| **Identifiers** | 21 | 0 | **1.0000 (100.0%)** |
-| **Financial** | 3 | 0 | **1.0000 (100.0%)** |
-| **Addresses** | 6 | 0 | **1.0000 (100.0%)** |
-| **Contacts** | 11 | 0 | **1.0000 (100.0%)** |
-| **DOB** | 8 | 0 | **1.0000 (100.0%)** |
-| **OVERALL LEAK METRIC** | **75** | **1** | **0.9867 (98.67%)** |
-
-#### Leak Findings
-- **Full Leak Detected**: `"Kotak Mahindra Capital Company"` (Entity: `ORG`).
-- **Partial Token Leaks**: `"Kotak"`, `"Mahindra"` (from the leaked organization), `"Gowda"` (from `"Subbayya Gowda"`; note that `"Subbayya"` was successfully redacted via promoter token propagation, while the unseen token `"Gowda"` survived).
-- **Two-Pass Protection Highlight**: While `"rakhi shetty"` was a detection false negative due to lowercase formatting, it was **100% redacted in the output document** because Pass 2 propagated the tokens registered from `"Rakhi Girija Shetty"`.
-
----
-
-## 4. Negative Trap Analysis (Over-Redaction Safeguards)
-
-To verify that the engine does not over-redact statutory and regulatory terms, **43 negative trap strings** were injected into the test document.
-
-**Result**: **43 / 43 Traps Preserved (100.0% Preservation Rate, 0% Over-Redaction)**
-
-```text
-[PRESERVED] Companies Act, 2013                  (Statutory Act)
-[PRESERVED] SEBI ICDR Regulations                 (Statutory Regulation)
-[PRESERVED] Section 2(76)                         (Statutory Section Reference)
-[PRESERVED] Rule 19(2)(b)                         (Statutory Rule Reference)
-[PRESERVED] Section 92                            (Statutory Filing Provision)
-[PRESERVED] BSE Limited                           (Public Stock Exchange)
-[PRESERVED] National Stock Exchange of India Ltd  (Public Stock Exchange)
-[PRESERVED] Securities and Exchange Board of India(Regulator)
-[PRESERVED] Reserve Bank of India                 (Central Bank)
-[PRESERVED] Supreme Court of India                (Judicial Body)
-[PRESERVED] High Court of Bombay                  (Judicial Body)
-[PRESERVED] INE0ABC01018                          (Financial ISIN - Not SEBI Reg)
-[PRESERVED] 1,84,89,583                           (Share Count with Indian Lakh Grouping)
-[PRESERVED] ₹7,100.00 million                     (Offer Valuation Amount)
-[PRESERVED] ₹ 5,00,000                            (UPI Limit Amount)
-[PRESERVED] 18.45% / 18.52%                       (Financial Growth Percentages)
-[PRESERVED] September 16, 2025                    (Offer Issue Date)
-[PRESERVED] February 13, 1979                     (Company Incorporation Date)
-[PRESERVED] version 2.1.4.0                       (Software Version - Not IPv4)
-[PRESERVED] Company Secretary & Compliance Officer(Corporate Officer Role)
-[PRESERVED] Book Running Lead Manager             (Financial Intermediary Role)
-[PRESERVED] 26 Boilerplate RHP Sentences          (Standard Legal Prose)
-```
-
----
-
-## 5. Structural & Format Preservation Verification
-
-The redacted output package was programmatically compared against the original benchmark using `eval/evaluate.py`:
-
-| Structural Property | Input Package | Redacted Output Package | Status |
-|---|:---:|:---:|:---:|
-| Paragraph Count (`<w:p>`) | 106 | 106 | **Identical** |
-| Table Count (`<w:tbl>`) | 2 | 2 | **Identical** |
-| Character Run Count (`<w:r>`) | 116 | 116 | **Identical** |
-| Run Property Signature Hash | `-952778194308119398` | `-952778194308119398` | **Identical** |
-| Embedded Media Images | 3 | 3 | **Identical** |
-| Hyperlink Rel Targets | 1 | 1 | **Identical** |
-| Document Sections | 1 | 1 | **Identical** |
-
-### Formatting Invariant
-When a name like `Kus|hal Subbayya |Hegde` spans three runs with formatting `(bold | italic | regular)`, the token projector maps the replacement words word-for-word (`Albert | Thomas | Allen`), ensuring that `Albert` is bold, `Thomas` is italic, and `Allen` is regular. No `<w:rPr>` tags are removed or altered.
-
----
-
-## 6. Real-World Execution on `Red Herring Prospectus.docx`
-
-The pipeline was executed against the official 400+ page SEBI filing (`Red Herring Prospectus.docx`):
-
+## 6. Ground-truth protocol for the real RHP
 ```bash
-python -m pii_redactor "Red Herring Prospectus.docx" \
-  -o "Red_Herring_Prospectus_Redacted.docx" \
-  --report report.json \
-  --mapping mapping.json
+python eval/annotate.py propose "Red Herring Prospectus.docx" --csv eval/rhp_review.csv   # candidates + context
+#   label each row TP / FP / TYPE:<X>; append missed PII as FN rows (search promoters, KMP, "Tel", "@", "DIN", "PAN")
+python eval/annotate.py build-gt eval/rhp_review.csv --out eval/data/rhp_ground_truth.json
+python eval/evaluate.py --docx "Red Herring Prospectus.docx" --gt eval/data/rhp_ground_truth.json --out eval/results_rhp
 ```
-
-### Execution Metrics
-- **Runtime**: **14.77 seconds** (End-to-end processing including OCR and image synthesis)
-- **Unique Entities Pseudonymized**: **283**
-- **Run-Level XML Text Replacements**: **736**
-- **Visual Image Regions Redacted**: **13** (Embedded scanned PAN card and Aadhaar card)
-- **Breakdown by Entity Class**:
-  - `Organizations`: **79**
-  - `Names`: **77**
-  - `Contacts`: **64** (Emails, phone numbers, corporate URLs)
-  - `Addresses`: **42** (Registered offices, manufacturing plants, residential listings)
-  - `Identifiers`: **18** (CIN, DINs, PANs, Aadhaar, SEBI numbers)
-  - `Date of Birth`: **3**
-
-### Visual Media Findings
-- **Image 7 (`image4.png`, 768x962)**: Scanned Indian PAN card.
-  - Redacted: `VISHAL SINGH` $\rightarrow$ `ETHAN GREEN`
-  - Redacted: `SUGRIV SINGH` $\rightarrow$ `ADAM GREEN` (Linked family surname preserved)
-  - Redacted: `NBWPS1951N` $\rightarrow$ `YVUPD2331F` (Format and PAN holder category `P` preserved)
-  - Redacted: `06/05/2000` $\rightarrow$ `11/07/2000`
-- **Image 8 (`image5.png`, 900x900)**: Scanned Indian Aadhaar card.
-  - Redacted: `MERAJ KHAN` $\rightarrow$ `TROY WARD`
-  - Redacted: `Sudhdan Khan` $\rightarrow$ `Daniel Ward` (Linked family surname preserved)
-  - Redacted: `2943 6593 3461` $\rightarrow$ `8229 3917 8439` (Verhoeff-valid checksum preserved)
-  - Redacted: Multi-line rural address in Katrauli, Phoolpur, Allahabad masked.
-
----
-
-## 7. Failure Modes & Limitations
-
-1. **Unregistered Entities Lacking Contextual Anchors**:
-   - Entities like `"Kotak Mahindra Capital Company"` lack a traditional corporate suffix (`Limited`, `Pvt. Ltd.`, `LLP`). Without an explicit gazetteer entry, heuristic back-traversal does not trigger.
-   - *Mitigation*: Enable optional spaCy NER (`--spacy-model en_core_web_lg`) or supply domain allowlists.
-2. **Devanagari / Vernacular Identity Cards**:
-   - Tesseract OCR defaults to English (`eng`). Indian identity cards containing regional languages (e.g., Hindi names and addresses on Aadhaar cards) require `--ocr-lang eng+hin` and `tesseract-ocr-hin` (pre-configured in `packages.txt`).
-3. **Cross-Entity Token Collision**:
-   - Pass-2 token propagation replaces standalone occurrences of common family surnames. If an unrelated individual shares a surname with a promoter, both will be mapped to the same synthetic surname. This guarantees privacy, though it may merge distinct references.
-
----
-
-## 8. Benchmark Reproduction Commands
-
-To reproduce the exact metrics and tables reported above:
-
-```bash
-# 1. Generate the benchmark document and ground-truth dataset
-python eval/build_benchmark.py
-
-# 2. Execute the evaluation harness
-python eval/evaluate.py
-
-# 3. View the generated JSON and Markdown results
-cat eval/results/metrics.md
-```
+Time-boxed sampling: label 100% of structured types (IDs, contacts, DOB) and a stratified random sample of
+PERSON/ORG/ADDRESS (e.g. 150 rows). Report the sample size next to the scores. Recall on a real document is
+bounded by what the annotator finds, so also do a targeted FN hunt: search the output for the promoter surnames,
+`@`, `+91`, `DIN`, `PAN` and the office PIN codes. The leak test automates this for every GT value.

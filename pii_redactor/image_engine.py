@@ -9,7 +9,8 @@ For every image part inside the .docx package we:
   3. register hits in the SAME global pseudonymizer, so "VISHAL SINGH" on the card and in the text
      receive the same fake;
   4. paint over each hit: `replace` (background-matched box + fake text), `mask` (black box) or `blur`;
-  5. optionally pixelate QR codes (Aadhaar QR encodes the holder's data) and blur faces;
+  5. optionally pixelate QR codes (Aadhaar QR encodes the holder's data) and the holder's photo
+     (Haar face detection, widened to the portrait frame; ID-layout fallback when no face is found);
   6. fail-safe: an image that looks like an ID card but yields no OCR hits is blurred entirely.
 The image is re-encoded in its original format (which also strips EXIF/GPS metadata).
 """
@@ -48,6 +49,7 @@ unique identification authority male female dob address aadhaar aadhar mera pehc
 issue date year birth name father's fathers father to www uidai gov in the republic my identity""".split())
 LABEL_RE = re.compile(r"(?i)\b(father'?s?\s*name|mother'?s?\s*name|husband'?s?\s*name|name|s\s*/\s*o|d\s*/\s*o|w\s*/\s*o|c\s*/\s*o)\b\s*[:\-.]?\s*")
 ADDR_LABEL_RE = re.compile(r"(?i)\baddress\b\s*[:\-.]?\s*")
+PORTRAIT_BLOCK_RE = re.compile(r"(?i)\b(father|mother|husband|dob|date\s+of\s+birth|year\s+of\s+birth|male|female)\b")
 PIN_RE = re.compile(r"(?<!\d)[1-9]\d{2}\s?\d{3}(?!\d)")
 REL_RE = re.compile(r"(?i)^(?:s|d|w|c)\s*/\s*o\s*[:.]?\s*([A-Za-z][A-Za-z.'\-]*(?:\s+[A-Za-z][A-Za-z.'\-]*){0,3})\s*,")
 FONT_CANDIDATES = [
@@ -99,6 +101,7 @@ class ImageReport:
     ocr_words: int = 0
     hits: list[dict] = field(default_factory=list)
     faces: int = 0
+    photo_regions: list[dict] = field(default_factory=list)
     qr_codes: int = 0
     failsafe_blur: bool = False
     skipped: str | None = None
@@ -237,7 +240,7 @@ class ImageRedactor:
         l, t, r, b = box
         pad = 3
         crop = img.crop((max(0, l - pad), max(0, t - pad), min(img.width, r + pad), min(img.height, b + pad))).convert("RGB")
-        px = list(crop.getdata())
+        px = list(crop.get_flattened_data() if hasattr(crop, "get_flattened_data") else crop.getdata())
         w, h = crop.size
         border = [px[y * w + x] for y in range(h) for x in range(w) if x in (0, w - 1) or y in (0, h - 1)]
         med = lambda seq, c: sorted(p[c] for p in seq)[len(seq) // 2]  # noqa: E731
@@ -265,31 +268,161 @@ class ImageRedactor:
             font = _font(size)
         draw.text((l, t + (b - t) / 2), fake, fill=fg, font=font, anchor="lm")
 
-    def _qr_and_faces(self, img: Image.Image, rep: ImageReport) -> Image.Image:
+    @staticmethod
+    def _pixelate(img: Image.Image, box, block: int = 16) -> None:
+        region = img.crop(box)
+        small = region.resize((max(1, region.width // block), max(1, region.height // block)), Image.NEAREST)
+        img.paste(small.resize(region.size, Image.NEAREST).filter(ImageFilter.GaussianBlur(6)), box)
+
+    def _obscure(self, img: Image.Image, box) -> None:
+        """Photos / QR codes cannot be 'replaced' with fake text: black box for `mask`, else pixelate."""
+        if self.policy == "mask":
+            ImageDraw.Draw(img).rectangle(box, fill=(0, 0, 0))
+        else:
+            self._pixelate(img, box)
+
+    @staticmethod
+    def _text_cover(box, words: list[Word]) -> float:
+        l, t, r, b = box
+        area = max(1, (r - l) * (b - t))
+        cov = sum(max(0, min(r, w.box[2]) - max(l, w.box[0])) * max(0, min(b, w.box[3]) - max(t, w.box[1]))
+                  for w in words)
+        return cov / area
+
+    def _find_qr(self, arr, words: list[Word], id_doc: bool) -> list[tuple[int, int, int, int]]:
+        h, w = arr.shape[:2]
+        try:
+            ok, pts = cv2.QRCodeDetector().detect(arr)
+        except Exception as exc:  # pragma: no cover
+            log.debug("QR detection failed: %s", exc)
+            ok, pts = False, None
+        if ok and pts is not None:
+            xs, ys = pts[0][:, 0], pts[0][:, 1]
+            return [(int(max(0, xs.min() - 8)), int(max(0, ys.min() - 8)),
+                     int(min(w, xs.max() + 8)), int(min(h, ys.max() + 8)))]
+        if not id_doc:
+            return []
+        # Photographed cards are often too blurred for the decoder: fall back to a dense, square,
+        # solidly-filled high-edge-density block that is not OCR text.
+        gray = cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
+        k = max(9, min(h, w) // 40)
+        dens = cv2.blur((cv2.Canny(gray, 60, 160) > 0).astype(np.float32), (k, k))
+        m = cv2.morphologyEx(((dens > 0.22) * 255).astype(np.uint8), cv2.MORPH_CLOSE, np.ones((k, k), np.uint8))
+        out = []
+        for c in cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]:
+            x, y, bw, bh = cv2.boundingRect(c)
+            box = (max(0, x - 4), max(0, y - 4), min(w, x + bw + 4), min(h, y + bh + 4))
+            if (bw * bh >= 0.01 * w * h and 0.8 <= bw / bh <= 1.25 and cv2.contourArea(c) / (bw * bh) >= 0.85
+                    and self._text_cover(box, words) < 0.15):
+                # edge density can bleed into an adjacent text line: stop the box above/below it
+                # (only words in the outer 20% bands: OCR noise inside the code itself is ignored)
+                top, bot = box[1] + 0.2 * (box[3] - box[1]), box[1] + 0.8 * (box[3] - box[1])
+                for wd in words:
+                    wl, wt, wr, wb = wd.box
+                    if wr > box[0] and wl < box[2] and wb > box[1] and wt < box[3]:
+                        cy = (wt + wb) / 2
+                        if cy > bot:
+                            box = (box[0], box[1], box[2], min(box[3], wt - 2))
+                        elif cy < top:
+                            box = (box[0], max(box[1], wb + 2), box[2], box[3])
+                out.append(box)
+        return out
+
+    def _find_faces(self, arr, words: list[Word]) -> list[tuple[int, int, int, int]]:
+        if not hasattr(cv2, "CascadeClassifier"):  # OpenCV 5 moved Haar cascades out of the main package
+            log.warning("cv2.CascadeClassifier unavailable (OpenCV %s): face detection disabled, "
+                        "falling back to ID-card layout rules", cv2.__version__)
+            return []
+        path = os.path.join(getattr(getattr(cv2, "data", None), "haarcascades", ""), "haarcascade_frontalface_default.xml")
+        if not os.path.exists(path):
+            return []
+        clf = cv2.CascadeClassifier(path)
+        gray = cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
+        found: list[tuple[int, int, int, int]] = []
+        # equalised pass catches low-contrast scans, raw pass catches well-lit photos that equalisation washes out
+        for g in (gray, cv2.equalizeHist(gray)):
+            for (x, y, w, h) in clf.detectMultiScale(g, scaleFactor=1.1, minNeighbors=4, minSize=(60, 60)):
+                box = (int(x), int(y), int(x + w), int(y + h))
+                if self._text_cover(box, words) > 0.2:  # a "face" made of OCR'd words is a false positive
+                    continue
+                if not any(min(box[2], f[2]) > max(box[0], f[0]) and min(box[3], f[3]) > max(box[1], f[1]) for f in found):
+                    found.append(box)
+        return found
+
+    @staticmethod
+    def _portrait_from_face(face, words: list[Word], size) -> tuple[int, int, int, int]:
+        """Widen a face box to the whole passport photo, stopping short of neighbouring text."""
+        l, t, r, b = face
+        fw, fh = r - l, b - t
+        L, T_, R, B = max(0, int(l - 0.45 * fw)), max(0, int(t - 0.45 * fh)), min(size[0], int(r + 0.45 * fw)), min(size[1], int(b + 0.75 * fh))
+        for w in words:
+            wl, wt, wr, wb = w.box
+            if wr <= L or wl >= R or wb <= T_ or wt >= B:
+                continue
+            if wt >= b and wl < r and wr > l:
+                B = min(B, wt - 2)
+            elif wl >= r:
+                R = min(R, wl - 2)
+            elif wr <= l:
+                L = max(L, wr + 2)
+            elif wb <= t:
+                T_ = max(T_, wb + 2)
+        return L, T_, R, B
+
+    @staticmethod
+    def _portrait_from_layout(lines: list[Line], size) -> tuple[tuple[int, int, int, int], str] | None:
+        """No face found on an ID card: locate the photo frame from the printed layout.
+
+        PAN: photo sits under the 'INCOME TAX DEPARTMENT' line, above the 'Name' label, left of the
+        'Permanent Account Number' title. Aadhaar: photo sits left of the name/father/DOB/gender block.
+        """
+        def bbox(line):
+            return (min(w.box[0] for w in line.words), min(w.box[1] for w in line.words),
+                    max(w.box[2] for w in line.words), max(w.box[3] for w in line.words))
+        text = [l.text.lower() for l in lines]
+        find = lambda pat: next((i for i, t in enumerate(text) if re.search(pat, t)), None)  # noqa: E731
+        itd, pan_title = find(r"income\s*tax"), find(r"permanent\s+account")
+        if itd is not None and pan_title is not None:
+            name = next((i for i in range(pan_title, len(lines)) if re.search(r"\bname\b", text[i])), None)
+            if name is not None:
+                top, right = bbox(lines[itd])[3] + 4, bbox(lines[pan_title])[0] - 6
+                bottom, left = bbox(lines[name])[1] - 4, max(0, bbox(lines[name])[0] - 8)
+                if right - left > 20 and bottom - top > 20:
+                    return (left, top, right, bottom), "pan_layout"
+        block = [i for i, t in enumerate(text) if PORTRAIT_BLOCK_RE.search(t)]
+        if block:
+            first = block[0] - 1 if block[0] > 0 and ImageRedactor._namelike(lines[block[0] - 1].text) else block[0]
+            boxes = [bbox(lines[i]) for i in range(first, block[-1] + 1)]
+            top, bottom = min(b[1] for b in boxes), max(b[3] for b in boxes)
+            pad = int(0.25 * (bottom - top))
+            top, bottom = max(0, top - pad), min(size[1], bottom + pad)
+            right = min(b[0] for b in boxes) - 6
+            left = max(0, int(right - 0.85 * (bottom - top)))
+            if right - left > 20 and bottom - top > 20:
+                return (left, top, right, bottom), "aadhaar_layout"
+        return None
+
+    def _qr_and_faces(self, img: Image.Image, rep: ImageReport, lines: list[Line]) -> Image.Image:
         if cv2 is None:
             return img
         arr = cv2.cvtColor(np.array(img.convert("RGB")), cv2.COLOR_RGB2BGR)
+        words = [w for l in lines for w in l.words]
         if self.mask_qr:
-            try:
-                ok, pts = cv2.QRCodeDetector().detect(arr)
-                if ok and pts is not None:
-                    xs, ys = pts[0][:, 0], pts[0][:, 1]
-                    box = (int(max(0, xs.min() - 8)), int(max(0, ys.min() - 8)),
-                           int(min(img.width, xs.max() + 8)), int(min(img.height, ys.max() + 8)))
-                    region = img.crop(box)
-                    small = region.resize((max(1, region.width // 16), max(1, region.height // 16)), Image.NEAREST)
-                    img.paste(small.resize(region.size, Image.NEAREST).filter(ImageFilter.GaussianBlur(6)), box)
-                    rep.qr_codes += 1
-            except Exception as exc:  # pragma: no cover
-                log.debug("QR detection failed: %s", exc)
+            for box in self._find_qr(arr, words, rep.id_document):
+                self._obscure(img, box)
+                rep.qr_codes += 1
         if self.blur_faces:
-            path = os.path.join(getattr(getattr(cv2, "data", None), "haarcascades", ""), "haarcascade_frontalface_default.xml")
-            if os.path.exists(path):
-                gray = cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
-                for (x, y, w, h) in cv2.CascadeClassifier(path).detectMultiScale(gray, 1.1, 5, minSize=(40, 40)):
-                    box = (int(x), int(y), int(x + w), int(y + h))
-                    img.paste(img.crop(box).filter(ImageFilter.GaussianBlur(radius=max(8, w // 6))), box)
-                    rep.faces += 1
+            faces = self._find_faces(arr, words)
+            rep.faces = len(faces)
+            for f in faces:
+                box = self._portrait_from_face(f, words, img.size) if rep.id_document else f
+                self._obscure(img, box)
+                rep.photo_regions.append({"box": box, "rule": "face"})
+            if rep.id_document and not faces:
+                found = self._portrait_from_layout(lines, img.size)
+                if found:
+                    self._obscure(img, found[0])
+                    rep.photo_regions.append({"box": found[0], "rule": found[1]})
         return img
 
     # ------------------------------------------------------------------ entry point
@@ -311,6 +444,8 @@ class ImageRedactor:
         lines = self.ocr(work)
         rep.ocr_words = sum(len(l.words) for l in lines)
         hits, rep.id_document = self.detect(lines)
+        # photo / QR first (on untouched pixels, and so pixelation never eats a painted fake)
+        work = self._qr_and_faces(work, rep, lines)
         # register first (global consistency), then paint
         for h in hits:
             self.pseudo.register(h.text, h.type)
@@ -321,11 +456,10 @@ class ImageRedactor:
             fake = self.pseudo.fake_for(h.text, h.type)
             self._paint(work, box, fake)
             rep.hits.append({"type": h.type.value, "text": h.text, "pseudonym": fake, "box": box, "rule": h.source})
-        work = self._qr_and_faces(work, rep)
         if self.failsafe and rep.id_document and not hits:
             work = work.filter(ImageFilter.GaussianBlur(radius=max(12, min(work.size) // 25)))
             rep.failsafe_blur = True
-        if not rep.hits and not rep.qr_codes and not rep.faces and not rep.failsafe_blur:
+        if not rep.hits and not rep.qr_codes and not rep.photo_regions and not rep.failsafe_blur:
             return rep  # untouched: keep the original bytes
         out = io.BytesIO()
         if fmt.upper() in ("JPEG", "JPG"):
