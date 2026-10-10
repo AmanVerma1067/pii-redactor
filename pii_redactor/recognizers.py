@@ -22,6 +22,39 @@ MIN_BIRTH_YEAR = 1920
 PHONE_LABEL_BEFORE = re.compile(r"(?i)\b(?:tel(?:ephone)?|fax|phone|ph|mob(?:ile)?)\.?\s*(?:no\.?\s*)?[:\-]?\s*\+?$")
 
 
+# ---------------------------------------------------------------------------
+# Compiled regex rules for structured PII and Indian statutory identifiers
+# ---------------------------------------------------------------------------
+EMAIL_RE = re.compile(r"(?<![\w.+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b")
+URL_RE = re.compile(r"(?<![\w@/])(?:https?://|www\.)[^\s<>\"']+", re.I)
+
+# Indian corporate & personal statutory IDs
+GSTIN_RE = re.compile(r"\b\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b")
+PAN_RE = re.compile(r"\b[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z]\b")  # 4th char = taxpayer category (P=Person, C=Company...)
+CIN_RE = re.compile(r"\b[LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}\b")    # 21-char Corporate Identity Number
+LLPIN_RE = re.compile(r"\b[A-Z]{3}-\d{4}\b")
+DIN_RE = re.compile(r"\bDIN\b\.?(?:\s*(?:No\.?|Number))?\s*[:\-–]?\s*(\d{8})\b")
+SEBI_REG_RE = re.compile(r"\b(?:IN[A-DF-Z]\d{9}|INBI\d{8})\b")     # Excludes 'INE' prefix used by ISIN security codes
+IFSC_RE = re.compile(r"\b[A-Z]{4}0[A-Z0-9]{6}\b")
+PASSPORT_RE = re.compile(r"\b[A-Z][1-9]\d{6}\b")
+AADHAAR_RE = re.compile(r"(?<![\d\-])(?<!\d )[2-9]\d{3}[ \-]?\d{4}[ \-]?\d{4}(?![\d\-])(?! \d)")
+
+# Financial, network & US identifiers
+CREDIT_CARD_RE = re.compile(r"(?<![\d\-])(?:[3-6]\d{3})(?:[ \-]?\d{4}){2}[ \-]?\d{1,7}(?![\d\-])")
+BANK_ACCOUNT_RE = re.compile(r"(?<![\w.,])\d{9,18}(?!\w|,\d)")
+SSN_RE = re.compile(r"(?<![\d-])(?!000|666|9\d\d)\d{3}-(?!00)\d{2}-(?!0000)\d{4}(?![\d-])")
+IPV4_RE = re.compile(r"(?<![\d.])(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)(?!\d|\.\d)")
+IPV6_RE = re.compile(r"\b(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}\b")
+
+# Phone numbers (Indian mobile, landline, toll-free, and international)
+PHONE_INTL_RE = re.compile(r"(?<![\w+])\+\d{1,3}(?:[ .\-]?\(?\d{1,8}\)?){1,5}(?![\w])")
+PHONE_LANDLINE_RE = re.compile(r"(?<![\w.,/+])\(?0\d{2,4}\)?[ \-]?\d{3,4}[ \-]?\d{3,5}(?![\w.,/])")
+PHONE_MOBILE_RE = re.compile(r"(?<![\w.,/+])[6-9]\d{4}[ \-]?\d{5}(?![\w.,/])")
+PHONE_MOBILE_334_RE = re.compile(r"(?<![\w.,/+])[6-9]\d{2}[ \-]\d{3}[ \-]\d{4}(?![\w.,/])")
+PHONE_TOLLFREE_RE = re.compile(r"(?<!\w)1800[ \-]?\d{3,4}[ \-]?\d{3,4}(?!\w)")
+PHONE_CTX_RE = re.compile(r"(?<![\w.,])\(?\d{2,5}\)?(?:[ \-]\d{2,8}){1,3}(?![\w.,])")
+
+
 @dataclass
 class PatternRecognizer:
     name: str
@@ -102,37 +135,31 @@ def _dob_not_phone(text: str, s: int, e: int) -> tuple[int, int] | None:
 
 def build_pattern_recognizers() -> list[PatternRecognizer]:
     R = PatternRecognizer
-    c = re.compile
     return [
-        R("email", T.EMAIL, c(r"(?<![\w.+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b"), 0.97),
-        R("url", T.URL, c(r"(?<![\w@/])(?:https?://|www\.)[^\s<>\"']+", re.I), 0.6, postprocess=_trim_url),
-        R("gstin", T.GSTIN, c(r"\b\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b"), 0.97),
-        R("pan", T.PAN, c(r"\b[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z]\b"), 0.95),
-        R("cin", T.CIN, c(r"\b[LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}\b"), 0.98),
-        R("llpin", T.LLPIN, c(r"\b[A-Z]{3}-\d{4}\b"), 0.9, context=("llpin", "llp identification")),
-        R("din", T.DIN, c(r"\bDIN\b\.?(?:\s*(?:No\.?|Number))?\s*[:\-–]?\s*(\d{8})\b"), 0.97, group=1),
-        R("sebi_reg", T.SEBI_REG, c(r"\bIN[A-DF-Z]\d{9}\b"), 0.95),
-        R("ifsc", T.IFSC, c(r"\b[A-Z]{4}0[A-Z0-9]{6}\b"), 0.9),
-        R("passport", T.PASSPORT, c(r"\b[A-Z][1-9]\d{6}\b"), 0.85, context=("passport",)),  # context-gated
-        R("aadhaar", T.AADHAAR, c(r"(?<![\d\-])(?<!\d )[2-9]\d{3}[ \-]?\d{4}[ \-]?\d{4}(?![\d\-])(?! \d)"), 0.95,
-          validator=_aadhaar_ok_factory()),
-        R("credit_card", T.CREDIT_CARD, c(r"(?<![\d\-])(?:[3-6]\d{3})(?:[ \-]?\d{4}){2}[ \-]?\d{1,7}(?![\d\-])"), 0.93,
-          validator=luhn_ok),
-        R("bank_account", T.BANK_ACCOUNT, c(r"(?<![\w.,])\d{9,18}(?!\w|,\d)"), 0.9,
+        R("email", T.EMAIL, EMAIL_RE, 0.97),
+        R("url", T.URL, URL_RE, 0.6, postprocess=_trim_url),
+        R("gstin", T.GSTIN, GSTIN_RE, 0.97),
+        R("pan", T.PAN, PAN_RE, 0.95),
+        R("cin", T.CIN, CIN_RE, 0.98),
+        R("llpin", T.LLPIN, LLPIN_RE, 0.9, context=("llpin", "llp identification")),
+        R("din", T.DIN, DIN_RE, 0.97, group=1),
+        R("sebi_reg", T.SEBI_REG, SEBI_REG_RE, 0.95),
+        R("ifsc", T.IFSC, IFSC_RE, 0.9),
+        R("passport", T.PASSPORT, PASSPORT_RE, 0.85, context=("passport",)),  # context-gated
+        R("aadhaar", T.AADHAAR, AADHAAR_RE, 0.95, validator=_aadhaar_ok_factory()),
+        R("credit_card", T.CREDIT_CARD, CREDIT_CARD_RE, 0.93, validator=luhn_ok),
+        R("bank_account", T.BANK_ACCOUNT, BANK_ACCOUNT_RE, 0.9,
           context=("account no", "account number", "a/c", "acct", "bank account", "account:"), context_window=30),
-        R("ssn", T.SSN, c(r"(?<![\d-])(?!000|666|9\d\d)\d{3}-(?!00)\d{2}-(?!0000)\d{4}(?![\d-])"), 0.9),
-        R("ipv4", T.IP_ADDRESS, c(r"(?<![\d.])(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)(?!\d|\.\d)"), 0.9,
-          validator=ip_ok),
-        R("ipv6", T.IP_ADDRESS, c(r"\b(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}\b"), 0.9, validator=ip_ok),
+        R("ssn", T.SSN, SSN_RE, 0.9),
+        R("ipv4", T.IP_ADDRESS, IPV4_RE, 0.9, validator=ip_ok),
+        R("ipv6", T.IP_ADDRESS, IPV6_RE, 0.9, validator=ip_ok),
         # ---- phones (Indian + international)
-        R("phone_intl", T.PHONE, c(r"(?<![\w+])\+\d{1,3}(?:[ .\-]?\(?\d{1,8}\)?){1,5}(?![\w])"), 0.85,
-          postprocess=_trim_phone),
-        R("phone_landline", T.PHONE, c(r"(?<![\w.,/+])\(?0\d{2,4}\)?[ \-]?\d{3,4}[ \-]?\d{3,5}(?![\w.,/])"), 0.75,
-          validator=lambda v: phone_digits_ok(v, 10, 12)),
-        R("phone_mobile", T.PHONE, c(r"(?<![\w.,/+])[6-9]\d{4}[ \-]?\d{5}(?![\w.,/])"), 0.8),
-        R("phone_mobile_334", T.PHONE, c(r"(?<![\w.,/+])[6-9]\d{2}[ \-]\d{3}[ \-]\d{4}(?![\w.,/])"), 0.75),
-        R("phone_tollfree", T.PHONE, c(r"(?<!\w)1800[ \-]?\d{3,4}[ \-]?\d{3,4}(?!\w)"), 0.8),
-        R("phone_ctx", T.PHONE, c(r"(?<![\w.,])\(?\d{2,5}\)?(?:[ \-]\d{2,8}){1,3}(?![\w.,])"), 0.7,
+        R("phone_intl", T.PHONE, PHONE_INTL_RE, 0.85, postprocess=_trim_phone),
+        R("phone_landline", T.PHONE, PHONE_LANDLINE_RE, 0.75, validator=lambda v: phone_digits_ok(v, 10, 12)),
+        R("phone_mobile", T.PHONE, PHONE_MOBILE_RE, 0.8),
+        R("phone_mobile_334", T.PHONE, PHONE_MOBILE_334_RE, 0.75),
+        R("phone_tollfree", T.PHONE, PHONE_TOLLFREE_RE, 0.8),
+        R("phone_ctx", T.PHONE, PHONE_CTX_RE, 0.7,
           context=("tel", "phone", "mobile", "mob", "fax", "contact no", "ph."), context_window=25,
           validator=lambda v: phone_digits_ok(v, 8, 12)),
         # ---- dates of birth: only with a DOB cue (or anywhere on an ID-card image)

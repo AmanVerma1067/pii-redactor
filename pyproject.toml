@@ -12,4 +12,5 @@ pii-redact = "pii_redactor.cli:main"
 packages = ["pii_redactor"]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 testpaths = ["tests"]

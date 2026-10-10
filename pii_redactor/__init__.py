@@ -1,12 +1,13 @@
 """pii_redactor: production-grade, format-preserving PII redaction and pseudonymization engine."""
 from __future__ import annotations
 
-from .anonymizer import Anonymizer, Pseudonymizer
-from .engine import DocxEngine
+from .anonymizer import Anonymizer
+from .docx_engine import DocxEngine
 from .entities import EntityType, Span
-from .ocr import ImageRedactor, OCRRedactor
-from .patterns import PatternRecognizer
+from .image_engine import ImageRedactor, OCRRedactor
 from .pipeline import Redactor, RedactionConfig, RedactionResult
+from .pseudonymizer import Pseudonymizer
+from .recognizers import PatternRecognizer
 
 __all__ = [
     "EntityType",

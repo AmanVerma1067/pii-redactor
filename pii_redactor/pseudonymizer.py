@@ -436,17 +436,26 @@ class Pseudonymizer:
 
     def _gen_alnum(self, etype: T, key: str, rng: random.Random) -> str:
         U, D = string.ascii_uppercase, string.digits
-        L = lambda n: "".join(rng.choice(U) for _ in range(n))  # noqa: E731
-        N = lambda n: "".join(rng.choice(D) for _ in range(n))  # noqa: E731
+
+        def rand_letters(count: int) -> str:
+            return "".join(rng.choice(U) for _ in range(count))
+
+        def rand_digits(count: int) -> str:
+            return "".join(rng.choice(D) for _ in range(count))
+
         n = len(key)
         if etype is T.PAN and n == 10:
-            return L(3) + key[3] + L(1) + N(4) + L(1)
+            # Preserve 4th character (taxpayer status: P=Individual, C=Company, F=Firm, etc.)
+            return rand_letters(3) + key[3] + rand_letters(1) + rand_digits(4) + rand_letters(1)
         if etype is T.AADHAAR and n == 12:
-            body = rng.choice("23456789") + N(10)
+            # 12 digits starting with 2-9 + valid Verhoeff check digit
+            body = rng.choice("23456789") + rand_digits(10)
             return body + verhoeff_digit(body)
         if etype is T.CIN and n == 21:
-            return key[0] + N(5) + rng.choice(STATE_CODES) + str(rng.randint(1950, 2022)) + key[12:15] + N(6)
+            # Preserve listing prefix (L/U) and company class (PLC/PTC)
+            return key[0] + rand_digits(5) + rng.choice(STATE_CODES) + str(rng.randint(1950, 2022)) + key[12:15] + rand_digits(6)
         if etype is T.GSTIN and n == 15:
+            # Reuse the synthetic PAN for characters 2..12 so GSTIN and PAN stay consistent
             return f"{rng.randint(1, 37):02d}" + self._value(T.PAN, key[2:12]) + key[12] + "Z" + rng.choice(U + D)
         if etype is T.SEBI_REG:
             alpha_len = len(key) - len(key.lstrip(U))
@@ -455,20 +464,21 @@ class Pseudonymizer:
             zeros = len(num_part) - len(num_part.lstrip("0"))
             digits_needed = len(num_part) - zeros - 1
             if digits_needed >= 0:
-                return prefix + "0" * zeros + rng.choice("123456789") + N(digits_needed)
-            return prefix + N(len(num_part))
+                return prefix + "0" * zeros + rng.choice("123456789") + rand_digits(digits_needed)
+            return prefix + rand_digits(len(num_part))
         if etype is T.DIN:
             zeros = len(key) - len(key.lstrip("0"))
-            return "0" * zeros + rng.choice("123456789") + N(n - zeros - 1)
+            return "0" * zeros + rng.choice("123456789") + rand_digits(n - zeros - 1)
         if etype is T.IFSC and n == 11:
-            return L(4) + "0" + N(6)
+            return rand_letters(4) + "0" + rand_digits(6)
         if etype is T.CREDIT_CARD:
-            body = key[0] + N(n - 2)
+            body = key[0] + rand_digits(n - 2)
             return body + luhn_digit(body)
         if etype is T.SSN and n == 9:
-            return "9" + N(8)
+            # 9xx area numbers are never issued by the SSA
+            return "9" + rand_digits(8)
         if etype is T.PASSPORT and n == 8:
-            return rng.choice("ABCDEFGHJKLMNPRSTUVWY") + rng.choice("123456789") + N(6)
+            return rng.choice("ABCDEFGHJKLMNPRSTUVWY") + rng.choice("123456789") + rand_digits(6)
         if etype is T.PHONE:
             keep = n - 10 if n > 10 else 0
             if key.startswith("1800"):
@@ -480,10 +490,10 @@ class Pseudonymizer:
                 first = rng.choice("6789")
             else:
                 first = body[0]
-            return head + first + N(len(body) - 1)
+            return head + first + rand_digits(len(body) - 1)
         if etype is T.BANK_ACCOUNT:
-            return rng.choice("123456789") + N(n - 1)
-        # generic: letters->letters, digits->digits
+            return rng.choice("123456789") + rand_digits(n - 1)
+        # generic fallback: letters -> letters, digits -> digits
         return "".join(rng.choice(U) if c.isalpha() else rng.choice(D) for c in key)
 
     def _fake_alnum(self, surface: str, etype: T) -> str:

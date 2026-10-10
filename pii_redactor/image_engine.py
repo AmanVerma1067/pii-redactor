@@ -237,17 +237,40 @@ class ImageRedactor:
 
     @staticmethod
     def _bg_fg(img: Image.Image, box) -> tuple[tuple, tuple]:
+        """Sample border median for background color and darkest 10% pixels for foreground text color."""
         l, t, r, b = box
         pad = 3
         crop = img.crop((max(0, l - pad), max(0, t - pad), min(img.width, r + pad), min(img.height, b + pad))).convert("RGB")
         px = list(crop.get_flattened_data() if hasattr(crop, "get_flattened_data") else crop.getdata())
         w, h = crop.size
         border = [px[y * w + x] for y in range(h) for x in range(w) if x in (0, w - 1) or y in (0, h - 1)]
-        med = lambda seq, c: sorted(p[c] for p in seq)[len(seq) // 2]  # noqa: E731
-        bg = tuple(med(border, c) for c in range(3))
+
+        def median_channel(seq, ch: int) -> int:
+            return sorted(p[ch] for p in seq)[len(seq) // 2]
+
+        bg = tuple(median_channel(border, c) for c in range(3)) if border else (255, 255, 255)
         dark = sorted(px, key=lambda p: sum(p))[: max(1, len(px) // 10)]
-        fg = tuple(med(dark, c) for c in range(3))
+        fg = tuple(median_channel(dark, c) for c in range(3)) if dark else (0, 0, 0)
         return bg, fg
+
+    def _create_banner(self, img: Image.Image) -> Image.Image:
+        """Create placeholder banner '[CONFIDENTIAL ID CARD REDACTED]' matching original dimensions."""
+        w, h = img.size
+        banner = Image.new("RGB", (w, h), color=(245, 245, 245))
+        draw = ImageDraw.Draw(banner)
+        draw.rectangle((10, 10, w - 10, h - 10), outline=(200, 30, 30), width=6)
+        text = "[CONFIDENTIAL ID CARD REDACTED]"
+        font_size = max(16, min(w // 20, h // 10))
+        font = _font(font_size)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        draw.text(((w - tw) / 2, (h - th) / 2 - 10), text, fill=(200, 30, 30), font=font)
+        sub = "Statutory Indian Identity Document Masked"
+        sub_font = _font(max(10, font_size // 2))
+        sbbox = draw.textbbox((0, 0), sub, font=sub_font)
+        stw, _ = sbbox[2] - sbbox[0], sbbox[3] - sbbox[1]
+        draw.text(((w - stw) / 2, (h + th) / 2 + 10), sub, fill=(80, 80, 80), font=sub_font)
+        return banner
 
     def _paint(self, img: Image.Image, box, fake: str) -> None:
         l, t, r, b = box
@@ -379,9 +402,13 @@ class ImageRedactor:
         def bbox(line):
             return (min(w.box[0] for w in line.words), min(w.box[1] for w in line.words),
                     max(w.box[2] for w in line.words), max(w.box[3] for w in line.words))
+
         text = [l.text.lower() for l in lines]
-        find = lambda pat: next((i for i, t in enumerate(text) if re.search(pat, t)), None)  # noqa: E731
-        itd, pan_title = find(r"income\s*tax"), find(r"permanent\s+account")
+
+        def find_line(pat: str) -> int | None:
+            return next((i for i, t in enumerate(text) if re.search(pat, t)), None)
+
+        itd, pan_title = find_line(r"income\s*tax"), find_line(r"permanent\s+account")
         if itd is not None and pan_title is not None:
             name = next((i for i in range(pan_title, len(lines)) if re.search(r"\bname\b", text[i])), None)
             if name is not None:
@@ -444,21 +471,29 @@ class ImageRedactor:
         lines = self.ocr(work)
         rep.ocr_words = sum(len(l.words) for l in lines)
         hits, rep.id_document = self.detect(lines)
-        # photo / QR first (on untouched pixels, and so pixelation never eats a painted fake)
-        work = self._qr_and_faces(work, rep, lines)
-        # register first (global consistency), then paint
+
+        # Register OCR hits in global cache first so text and image pseudonyms stay synced
         for h in hits:
             self.pseudo.register(h.text, h.type)
-        for h in hits:
-            box = self._boxes_for(lines[h.line], h)
-            if box is None:
-                continue
-            fake = self.pseudo.fake_for(h.text, h.type)
-            self._paint(work, box, fake)
-            rep.hits.append({"type": h.type.value, "text": h.text, "pseudonym": fake, "box": box, "rule": h.source})
-        if self.failsafe and rep.id_document and not hits:
-            work = work.filter(ImageFilter.GaussianBlur(radius=max(12, min(work.size) // 25)))
-            rep.failsafe_blur = True
+
+        if self.policy == "banner" and (rep.id_document or hits):
+            work = self._create_banner(work)
+            for h in hits:
+                rep.hits.append({"type": h.type.value, "text": h.text, "pseudonym": "[REDACTED]", "rule": h.source})
+        else:
+            # Obscure photo/QR before painting fake text so pixelation never overwrites painted text
+            work = self._qr_and_faces(work, rep, lines)
+            for h in hits:
+                box = self._boxes_for(lines[h.line], h)
+                if box is None:
+                    continue
+                fake = self.pseudo.fake_for(h.text, h.type)
+                self._paint(work, box, fake)
+                rep.hits.append({"type": h.type.value, "text": h.text, "pseudonym": fake, "box": box, "rule": h.source})
+            if self.failsafe and rep.id_document and not hits:
+                work = work.filter(ImageFilter.GaussianBlur(radius=max(12, min(work.size) // 25)))
+                rep.failsafe_blur = True
+
         if not rep.hits and not rep.qr_codes and not rep.photo_regions and not rep.failsafe_blur:
             return rep  # untouched: keep the original bytes
         out = io.BytesIO()
@@ -471,3 +506,7 @@ class ImageRedactor:
                 work.save(out, format="PNG")
         part._blob = out.getvalue()
         return rep
+
+
+# Alias for backward compatibility
+OCRRedactor = ImageRedactor

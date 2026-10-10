@@ -266,3 +266,25 @@ def table_context_entities(root: etree._Element) -> Iterator[tuple[str, T]]:
                     cand = (row[1].strip() if et is T.ADDRESS else row[1].strip().split("\n")[0])
                     if rx.search(cand) and _is_valid_table_val(cand, et):
                         yield cand, et
+
+
+class DocxEngine:
+    """High-level wrapper for WordprocessingML traversal and formatting-preserved replacement."""
+
+    def __init__(self, anonymizer):
+        self.anonymizer = anonymizer
+
+    def collect_parts(self, doc):
+        return collect_xml_parts(doc)
+
+    def extract_table_entities(self, root: etree._Element):
+        return table_context_entities(root)
+
+    def replace_paragraphs(self, root: etree._Element) -> int:
+        return replace_in_paragraphs(root, self.anonymizer)
+
+    def scrub_xml_attributes(self, root: etree._Element) -> int:
+        return scrub_generic(root, self.anonymizer)
+
+    def scrub_rels(self, doc) -> int:
+        return scrub_relationships(doc, self.anonymizer)
